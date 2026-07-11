@@ -1,0 +1,230 @@
+.drawer {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  z-index: 180;
+  display: flex;
+  align-items: stretch;
+  width: min(340px, calc(100vw - 1rem));
+  transform: translate(calc(100% - 42px), -50%);
+  transition:
+    transform 0.42s cubic-bezier(0.2, 0.9, 0.18, 1),
+    filter 0.35s ease;
+  filter: drop-shadow(-18px 22px 42px rgba(0, 0, 0, 0.28));
+}
+
+.drawer:hover,
+.drawer:focus-within {
+  transform: translate(0, -50%);
+}
+
+.handle {
+  width: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: none;
+  border-radius: 22px 0 0 22px;
+  background: rgba(30, 24, 18, 0.78);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  color: rgba(212, 188, 150, 0.9);
+}
+
+.handle span {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.panel {
+  flex: 1;
+  min-height: 420px;
+  max-height: min(76vh, 620px);
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-right: none;
+  border-radius: 22px 0 0 22px;
+  background:
+    radial-gradient(circle at 16% 10%, rgba(212, 188, 150, 0.16), transparent 32%),
+    rgba(20, 16, 12, 0.84);
+  backdrop-filter: blur(28px) saturate(1.25);
+  -webkit-backdrop-filter: blur(28px) saturate(1.25);
+}
+
+.kicker {
+  margin: 0 0 0.35rem;
+  color: var(--accent);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  max-width: 14rem;
+  color: var(--text-primary);
+  font-size: 1.15rem;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.copy {
+  margin: 0.55rem 0 0;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  display: none;
+}
+
+.addRow {
+  display: flex;
+  gap: 0.45rem;
+  margin-top: 1rem;
+}
+
+.addRow input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  padding: 0.62rem 0.75rem;
+  outline: none;
+  font-size: 0.78rem;
+}
+
+.addRow input:focus {
+  border-color: rgba(212, 188, 150, 0.42);
+  box-shadow: 0 0 24px rgba(212, 188, 150, 0.12);
+}
+
+.addRow button,
+.item button {
+  border: none;
+  cursor: pointer;
+}
+
+.addRow button {
+  width: 2.45rem;
+  height: 2.45rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: #1c1712;
+  font-size: 1.1rem;
+}
+
+.addRow button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.list {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  justify-content: space-between;
+  padding: 0.75rem 0.75rem 0.75rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.065);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  cursor: grab;
+  transition:
+    transform 0.22s ease,
+    background 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.25s ease;
+}
+
+.item:hover {
+  transform: translateX(-3px);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(212, 188, 150, 0.28);
+  box-shadow: 0 0 24px rgba(212, 188, 150, 0.1);
+}
+
+.item[data-dragging] {
+  transform: translateX(-8px) rotate(-1deg) scale(1.035);
+  background: rgba(212, 188, 150, 0.16);
+  border-color: rgba(212, 188, 150, 0.5);
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.28),
+    0 0 30px rgba(212, 188, 150, 0.18);
+  opacity: 0.88;
+}
+
+.dragGhost {
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+  max-width: 240px;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgba(212, 188, 150, 0.55);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 18% 10%, rgba(212, 188, 150, 0.22), transparent 34%),
+    rgba(31, 24, 18, 0.92);
+  color: rgba(255, 255, 255, 0.9);
+  font: 700 0.78rem/1.25 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.34),
+    0 0 34px rgba(212, 188, 150, 0.22);
+}
+
+.item:active {
+  cursor: grabbing;
+}
+
+.item button {
+  width: 1.6rem;
+  height: 1.6rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.9rem;
+}
+
+.item button:hover {
+  color: var(--red);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.empty {
+  margin: 0.5rem 0 0;
+  color: rgba(255, 255, 255, 0.36);
+  font-size: 0.72rem;
+}
+
+@media (max-width: 720px) {
+  .drawer {
+    top: auto;
+    bottom: 5.4rem;
+    width: min(320px, calc(100vw - 4rem));
+    transform: translate(calc(100% - 38px), 0);
+  }
+
+  .drawer:hover,
+  .drawer:focus-within {
+    transform: translate(0, 0);
+  }
+
+  .handle {
+    width: 38px;
+  }
+}

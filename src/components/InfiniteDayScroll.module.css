@@ -1,0 +1,103 @@
+.wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.track {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(220px, 0.86fr) minmax(300px, 1fr) minmax(220px, 0.86fr);
+  justify-content: center;
+  gap: 0.9rem;
+  padding: 0.85rem 1rem 0.65rem;
+  overflow: hidden;
+  touch-action: pan-y;
+  cursor: grab;
+  user-select: none;
+  transform: translate3d(var(--drag-x, 0), 0, 0);
+  transition: transform 0.38s cubic-bezier(0.18, 0.9, 0.2, 1);
+  animation: trackIn 0.35s ease both;
+  will-change: transform;
+}
+
+.dragging {
+  cursor: grabbing;
+  transition: none;
+}
+
+.next {
+  animation: slideNext 0.24s cubic-bezier(0.2, 0.9, 0.18, 1) both;
+}
+
+.prev {
+  animation: slidePrev 0.24s cubic-bezier(0.2, 0.9, 0.18, 1) both;
+}
+
+.cardWrap {
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  transform: translateY(calc(var(--drag-progress, 0) * -4px));
+  transition:
+    transform 0.35s cubic-bezier(0.18, 0.9, 0.2, 1),
+    filter 0.35s ease;
+  will-change: transform;
+}
+
+.centerCard {
+  z-index: 2;
+  filter: drop-shadow(0 0 calc(18px * var(--drag-progress, 0)) rgba(212, 188, 150, 0.14));
+}
+
+@media (min-width: 768px) {
+  .track {
+    grid-template-columns: minmax(240px, 330px) minmax(330px, 380px) minmax(240px, 330px);
+  }
+}
+
+@media (max-width: 640px) {
+  .track {
+    grid-template-columns: 18vw minmax(72vw, 1fr) 18vw;
+    gap: 0.7rem;
+    padding-inline: 0.65rem;
+  }
+
+}
+
+@keyframes trackIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideNext {
+  from {
+    transform: translateX(18px);
+    opacity: 0.86;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slidePrev {
+  from {
+    transform: translateX(-18px);
+    opacity: 0.86;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}

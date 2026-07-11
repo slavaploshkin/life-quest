@@ -1,0 +1,226 @@
+.bar {
+  position: relative;
+  z-index: 200;
+  flex-shrink: 0;
+  padding: 0.55rem 0.9rem calc(0.8rem + env(safe-area-inset-bottom, 0));
+}
+
+.glass {
+  position: relative;
+  overflow: hidden;
+  max-width: 820px;
+  margin: 0 auto;
+  background: rgba(30, 24, 18, 0.72);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 26px;
+  padding: 0.72rem 0.85rem 0.62rem;
+  box-shadow:
+    0 -8px 32px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.35s ease,
+    background 0.3s ease,
+    transform 0.38s cubic-bezier(0.18, 0.9, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.glass::before {
+  content: "";
+  position: absolute;
+  inset: -120% auto -120% -28%;
+  width: 22%;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent,
+    rgba(255, 244, 215, 0.04),
+    rgba(255, 244, 215, 0.3),
+    rgba(255, 244, 215, 0.04),
+    transparent
+  );
+  opacity: 0;
+  transform: translateX(-150%) rotate(18deg);
+}
+
+.glass::after {
+  content: "";
+  position: absolute;
+  top: 28%;
+  right: 18%;
+  width: 5px;
+  height: 5px;
+  pointer-events: none;
+  border-radius: 50%;
+  background: rgba(255, 244, 215, 0.9);
+  box-shadow:
+    34px 12px 0 -2px rgba(212, 188, 150, 0.62),
+    -48px 22px 0 -2px rgba(255, 244, 215, 0.38),
+    -12px -18px 0 -2px rgba(212, 188, 150, 0.5);
+  opacity: 0;
+  transform: translateY(8px) scale(0.7);
+}
+
+.row,
+.options {
+  position: relative;
+  z-index: 1;
+}
+
+.glass:hover {
+  background: rgba(34, 27, 20, 0.82);
+  border-color: rgba(212, 188, 150, 0.32);
+  box-shadow:
+    0 -8px 32px rgba(0, 0, 0, 0.35),
+    0 0 22px rgba(212, 188, 150, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transform: perspective(900px) rotateX(4deg) translateY(-5px) scale(1.012);
+}
+
+.glass:hover::before,
+.glass:focus-within::before,
+.dropActive::before {
+  opacity: 1;
+  animation: inputShine 1.05s cubic-bezier(0.2, 0.9, 0.18, 1) both;
+}
+
+.glass:hover::after,
+.glass:focus-within::after,
+.dropActive::after {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition:
+    opacity 0.2s ease,
+    transform 0.42s cubic-bezier(0.18, 0.9, 0.2, 1);
+}
+
+.glass:focus-within {
+  border-color: rgba(212, 188, 150, 0.55);
+  box-shadow:
+    0 -8px 32px rgba(0, 0, 0, 0.35),
+    0 0 28px rgba(212, 188, 150, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transform: perspective(900px) rotateX(4deg) translateY(-5px) scale(1.012);
+}
+
+.dropActive {
+  border-color: rgba(212, 188, 150, 0.78);
+  box-shadow:
+    0 -10px 36px rgba(0, 0, 0, 0.36),
+    0 0 34px rgba(212, 188, 150, 0.26),
+    inset 0 0 0 1px rgba(212, 188, 150, 0.2);
+  transform: translateY(-4px) scale(1.01);
+}
+
+.dropActive .input::placeholder {
+  color: rgba(212, 188, 150, 0.72);
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pill {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.65rem;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+}
+
+.pillActive {
+  background: rgba(201, 184, 150, 0.2);
+  border-color: rgba(201, 184, 150, 0.45);
+  color: var(--accent);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.optionsBtn {
+  flex-shrink: 0;
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 1rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.optionsBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 1.03rem;
+  padding: 0.58rem 0;
+  outline: none;
+  min-width: 0;
+}
+
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+  transition: color 0.2s;
+}
+
+.glass:hover .input::placeholder,
+.glass:focus-within .input::placeholder {
+  color: rgba(212, 188, 150, 0.62);
+}
+
+.sendBtn {
+  flex-shrink: 0;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1a1510;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: transform 0.15s, opacity 0.15s;
+}
+
+.sendBtn:not(:disabled):hover {
+  transform: scale(1.05);
+}
+
+.sendBtn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+@keyframes inputShine {
+  from {
+    transform: translateX(-150%) rotate(18deg);
+  }
+  to {
+    transform: translateX(720%) rotate(18deg);
+  }
+}
+

@@ -1,0 +1,188 @@
+.wrap {
+  padding-bottom: 2rem;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+@media (max-width: 640px) {
+  .header {
+    grid-template-columns: 1fr;
+  }
+}
+
+.brand {
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0.25rem 0 0;
+}
+
+.chartBox {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 0.75rem;
+}
+
+.chartTitle {
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin: 0 0 0.75rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chart {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+  height: 80px;
+}
+
+.barCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.barTrack {
+  width: 100%;
+  height: 56px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.barFill {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 2px 2px 0 0;
+  min-height: 4px;
+  transition: height 0.3s ease;
+}
+
+.barDate {
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.diffUp {
+  font-size: 0.55rem;
+  color: var(--green);
+  font-weight: 600;
+}
+
+.diffDown {
+  font-size: 0.55rem;
+  color: var(--red);
+  font-weight: 600;
+}
+
+.tableWrap {
+  position: relative;
+  overflow-x: auto;
+  margin: 1rem 0.5rem 0;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+
+.watermark {
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 4rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.03);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.7rem;
+  position: relative;
+  z-index: 1;
+}
+
+.table th,
+.table td {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+}
+
+.table th {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.num {
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.max {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.min {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.selected {
+  background: rgba(201, 184, 150, 0.06);
+}
+
+.check {
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  border-radius: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  padding: 0;
+  font-size: 0.65rem;
+  color: #000;
+}
+
+.check.checked {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 2rem !important;
+}
