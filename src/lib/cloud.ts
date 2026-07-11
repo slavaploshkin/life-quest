@@ -16,8 +16,12 @@ function emptySnapshot(): UserSnapshot {
   }
 }
 
-export async function fetchCloudSnapshot(userId: string): Promise<UserSnapshot | null> {
-  if (!supabaseConfigured || !supabase) return null
+export async function fetchCloudSnapshot(
+  userId: string,
+): Promise<{ snapshot: UserSnapshot | null; error: string | null }> {
+  if (!supabaseConfigured || !supabase) {
+    return { snapshot: null, error: 'Cloud is not configured' }
+  }
 
   const { data, error } = await supabase
     .from('user_snapshots')
@@ -25,16 +29,24 @@ export async function fetchCloudSnapshot(userId: string): Promise<UserSnapshot |
     .eq('user_id', userId)
     .maybeSingle()
 
-  if (error || !data) return null
+  if (error) {
+    console.error('Cloud fetch failed', error.message)
+    return { snapshot: null, error: error.message }
+  }
+
+  if (!data) return { snapshot: null, error: null }
 
   const agenda = Array.isArray(data.agenda)
     ? data.agenda.filter((item): item is string => typeof item === 'string')
     : []
 
   return {
-    app_data: normalizeAppData(data.app_data as AppData),
-    agenda,
-    updated_at: data.updated_at ?? new Date(0).toISOString(),
+    snapshot: {
+      app_data: normalizeAppData(data.app_data as AppData),
+      agenda,
+      updated_at: data.updated_at ?? new Date(0).toISOString(),
+    },
+    error: null,
   }
 }
 
@@ -42,8 +54,10 @@ export async function saveCloudSnapshot(
   userId: string,
   appData: AppData,
   agenda: string[],
-): Promise<string | null> {
-  if (!supabaseConfigured || !supabase) return null
+): Promise<{ updatedAt: string | null; error: string | null }> {
+  if (!supabaseConfigured || !supabase) {
+    return { updatedAt: null, error: 'Cloud is not configured' }
+  }
 
   const updatedAt = new Date().toISOString()
   const payload = {
@@ -56,10 +70,18 @@ export async function saveCloudSnapshot(
   const { error } = await supabase.from('user_snapshots').upsert(payload, { onConflict: 'user_id' })
   if (error) {
     console.error('Cloud save failed', error.message)
-    return null
+    return { updatedAt: null, error: error.message }
   }
 
-  return updatedAt
+  return { updatedAt, error: null }
+}
+
+export function snapshotScore(appData: AppData, agenda: string[]): number {
+  let score = agenda.length
+  score += appData.habits.length * 10
+  score += Object.keys(appData.dayLogs).length * 5
+  score += appData.workoutSessions.length * 5
+  return score
 }
 
 export function subscribeCloudSnapshot(

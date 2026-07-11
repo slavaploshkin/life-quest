@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AppData, DayLog, Recurrence, WorkoutExercise, WorkoutSession } from '../types'
 import {
   fetchCloudSnapshot,
-  hasMeaningfulData,
   saveCloudSnapshot,
+  snapshotScore,
   subscribeCloudSnapshot,
 } from '../lib/cloud'
 import { emptyDayLog, loadAgendaItems, loadData, saveAgendaItems, saveData } from '../lib/storage'
@@ -18,6 +18,7 @@ export function useAppData(userId: string, storageId?: string) {
   const [agendaItems, setAgendaItems] = useState<string[]>(() => loadAgendaItems(localKey))
   const [ready, setReady] = useState(!isCloudEnabled())
   const [syncing, setSyncing] = useState(false)
+  const [syncError, setSyncError] = useState<string | null>(null)
 
   const skipSaveRef = useRef(true)
   const saveTimerRef = useRef<number | null>(null)
@@ -27,14 +28,18 @@ export function useAppData(userId: string, storageId?: string) {
 
   const persistSnapshot = useCallback(
     async (nextData: AppData, nextAgenda: string[]) => {
-      if (!isCloudEnabled()) return
+      if (!isCloudEnabled()) return true
       setSyncing(true)
-      const updatedAt = await saveCloudSnapshot(userId, nextData, nextAgenda)
-      if (updatedAt) {
-        lastSavedAtRef.current = Date.parse(updatedAt)
-        lastRemoteAtRef.current = updatedAt
+      const result = await saveCloudSnapshot(userId, nextData, nextAgenda)
+      if (result.updatedAt) {
+        lastSavedAtRef.current = Date.parse(result.updatedAt)
+        lastRemoteAtRef.current = result.updatedAt
+        setSyncError(null)
+      } else if (result.error) {
+        setSyncError(result.error)
       }
       setSyncing(false)
+      return Boolean(result.updatedAt)
     },
     [userId],
   )
@@ -77,20 +82,37 @@ export function useAppData(userId: string, storageId?: string) {
         return
       }
 
-      const cloud = await fetchCloudSnapshot(userId)
+      const cloudResult = await fetchCloudSnapshot(userId)
       if (cancelled) return
 
-      if (cloud) {
+      if (cloudResult.error) {
+        setSyncError(cloudResult.error)
+      }
+
+      const cloud = cloudResult.snapshot
+      const localScore = snapshotScore(localData, localAgenda)
+      const cloudScore = cloud ? snapshotScore(cloud.app_data, cloud.agenda) : -1
+      const useCloud = cloud != null && cloudScore >= localScore && cloudScore > 0
+      const useLocal = localScore > 0 && (!cloud || localScore > cloudScore)
+
+      if (useCloud && cloud) {
         lastRemoteAtRef.current = cloud.updated_at
         lastSavedAtRef.current = Date.parse(cloud.updated_at)
         setData(cloud.app_data)
         setAgendaItems(cloud.agenda)
         saveData(localKey, cloud.app_data)
         saveAgendaItems(localKey, cloud.agenda)
-      } else if (hasMeaningfulData(localData) || localAgenda.length > 0) {
+      } else if (useLocal) {
         setData(localData)
         setAgendaItems(localAgenda)
         await persistSnapshot(localData, localAgenda)
+      } else if (cloud) {
+        lastRemoteAtRef.current = cloud.updated_at
+        lastSavedAtRef.current = Date.parse(cloud.updated_at)
+        setData(cloud.app_data)
+        setAgendaItems(cloud.agenda)
+        saveData(localKey, cloud.app_data)
+        saveAgendaItems(localKey, cloud.agenda)
       } else {
         setData(localData)
         setAgendaItems(localAgenda)
@@ -312,6 +334,14 @@ export function useAppData(userId: string, storageId?: string) {
     })
   }, [])
 
+  const pushLocalToCloud = useCallback(async () => {
+    const localData = loadData(localKey)
+    const localAgenda = loadAgendaItems(localKey)
+    setData(localData)
+    setAgendaItems(localAgenda)
+    return persistSnapshot(localData, localAgenda)
+  }, [localKey, persistSnapshot])
+
   const sortedHabits = [...data.habits].sort((a, b) => a.order - b.order)
 
   return {
@@ -320,6 +350,8 @@ export function useAppData(userId: string, storageId?: string) {
     agendaItems,
     ready,
     syncing,
+    syncError,
+    pushLocalToCloud,
     getDayLog,
     toggleTask,
     updateDayField,

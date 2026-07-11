@@ -179,6 +179,34 @@
   transform: translateX(0);
 }
 
+.syncErrorDot {
+  position: absolute;
+  right: -0.05rem;
+  bottom: -0.05rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: #f87171;
+  border: 2px solid rgba(20, 16, 12, 0.92);
+}
+
+.syncBtn {
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition:
+    color 0.18s,
+    border-color 0.18s,
+    transform 0.2s,
+    box-shadow 0.25s;
+}
+
 .exportBtn {
   flex-shrink: 0;
   background: rgba(255, 255, 255, 0.06);
@@ -217,6 +245,7 @@
 }
 
 .exportBtn:hover,
+.syncBtn:hover,
 .logoutBtn:hover {
   color: var(--accent);
   border-color: rgba(201, 184, 150, 0.35);

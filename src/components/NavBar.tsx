@@ -12,6 +12,8 @@ interface NavBarProps {
   active: Tab
   accountName: string
   syncing?: boolean
+  syncError?: string | null
+  onPushSync?: () => void
   onChange: (tab: Tab) => void
   onExport: () => void
   onLogout: () => void
@@ -52,12 +54,25 @@ function TabIcon({ id }: { id: Tab }) {
   )
 }
 
-export function NavBar({ active, accountName, syncing = false, onChange, onExport, onLogout }: NavBarProps) {
+export function NavBar({
+  active,
+  accountName,
+  syncing = false,
+  syncError = null,
+  onPushSync,
+  onChange,
+  onExport,
+  onLogout,
+}: NavBarProps) {
   return (
     <nav className={styles.nav}>
-      <div className={styles.account} title={accountName}>
+      <div
+        className={styles.account}
+        title={syncError ? `Sync error: ${syncError}` : accountName}
+      >
         {accountName.slice(0, 1).toUpperCase()}
         {syncing && <span className={styles.syncDot} aria-label="Syncing" />}
+        {syncError && !syncing && <span className={styles.syncErrorDot} aria-label="Sync error" />}
       </div>
       <div className={styles.tabs}>
         {TABS.map((t) => (
@@ -77,6 +92,16 @@ export function NavBar({ active, accountName, syncing = false, onChange, onExpor
       <button type="button" className={styles.exportBtn} onClick={onExport} title="Экспорт данных">
         ↓
       </button>
+      {onPushSync && (
+        <button
+          type="button"
+          className={styles.syncBtn}
+          onClick={onPushSync}
+          title={syncError ? `Sync error: ${syncError}. Tap to retry.` : 'Upload data to cloud'}
+        >
+          ↻
+        </button>
+      )}
       <button type="button" className={styles.logoutBtn} onClick={onLogout} title="Logout">
         out
       </button>
