@@ -47,6 +47,7 @@
 }
 
 .account {
+  position: relative;
   width: 2.15rem;
   height: 2.15rem;
   display: grid;
@@ -59,6 +60,30 @@
   font-weight: 800;
   letter-spacing: 0.04em;
   box-shadow: 0 10px 26px rgba(212, 165, 116, 0.18);
+}
+
+.syncDot {
+  position: absolute;
+  right: -0.05rem;
+  bottom: -0.05rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: #7dd3fc;
+  border: 2px solid rgba(20, 16, 12, 0.92);
+  animation: syncPulse 1s ease-in-out infinite;
+}
+
+@keyframes syncPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
 }
 
 .tabs {

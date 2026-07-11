@@ -63,26 +63,28 @@ npx vercel
 4. Root Directory: `.` (корень репо)
 5. Deploy
 
-### Два личных аккаунта
+### Supabase (синхронизация телефон ↔ компьютер)
 
-В Vercel → Project → **Settings → Environment Variables**:
+Пошагово: **`supabase/SETUP.md`**
 
 | Name | Value |
 |------|-------|
-| `VITE_ACCOUNT_1_USERNAME` | первый логин |
-| `VITE_ACCOUNT_1_PASSWORD` | первый пароль |
-| `VITE_ACCOUNT_1_NAME` | имя на экране |
+| `VITE_SUPABASE_URL` | Project URL из Supabase |
+| `VITE_SUPABASE_ANON_KEY` | anon public key |
+| `VITE_ACCOUNT_1_USERNAME` | логин (без @) |
+| `VITE_ACCOUNT_1_NAME` | имя в меню |
 | `VITE_ACCOUNT_2_USERNAME` | второй логин |
-| `VITE_ACCOUNT_2_PASSWORD` | второй пароль |
-| `VITE_ACCOUNT_2_NAME` | имя на экране |
+| `VITE_ACCOUNT_2_NAME` | второе имя |
+
+В Supabase создай пользователей с email `{логин}@life-quest.app` и своим паролем.
 
 Production + Preview → Save → **Redeploy**.
 
-У каждого логина свои задачи, дни, тренировки и agenda. Вход запоминается на устройстве до нажатия `out`.
+Данные хранятся в облаке и синхронизируются между устройствами. Вход запоминается до `out`.
 
 ### Данные
 
-Сейчас данные в **localStorage** браузера и разделены по аккаунтам (на каждом устройстве свои). Не стираются при обновлении страницы, но если очистишь Safari или сменишь телефон — нужен **экспорт JSON** (кнопка в приложении) или позже подключим Supabase для синхронизации.
+Облако Supabase + локальный кэш в браузере. Экспорт JSON — резервная копия.
 
 ### PWA на iPhone
 

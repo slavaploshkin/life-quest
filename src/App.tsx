@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { format, addDays, subDays } from 'date-fns'
 import { useAppData } from './hooks/useAppData'
 import { weekStats, weekRangeLabel } from './lib/stats'
-import { exportData, importData, loadAgendaItems, saveAgendaItems } from './lib/storage'
+import { exportData, normalizeAppData } from './lib/storage'
 import type { ActiveAccount } from './lib/auth'
 import type { Tab } from './types'
 import { NavBar } from './components/NavBar'
@@ -21,21 +21,12 @@ interface AppProps {
 }
 
 function App({ account, onLogout }: AppProps) {
-  const actions = useAppData(account.storageId)
-  const { data, habits } = actions
+  const actions = useAppData(account.userId)
+  const { data, habits, agendaItems, ready, syncing } = actions
   const [tab, setTab] = useState<Tab>('day')
   const [anchor, setAnchor] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [agendaItems, setAgendaItems] = useState<string[]>(() => loadAgendaItems(account.storageId))
   const importRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    setAgendaItems(loadAgendaItems(account.storageId))
-  }, [account.storageId])
-
-  useEffect(() => {
-    saveAgendaItems(account.storageId, agendaItems)
-  }, [account.storageId, agendaItems])
 
   const onSelectedDateChange = useCallback((date: string) => {
     setSelectedDate(date)
@@ -58,7 +49,7 @@ function App({ account, onLogout }: AppProps) {
     const reader = new FileReader()
     reader.onload = () => {
       try {
-        actions.setData(importData(account.storageId, reader.result as string))
+        actions.setData(normalizeAppData(JSON.parse(reader.result as string)))
         alert('Данные импортированы!')
       } catch {
         alert('Ошибка импорта — проверь файл')
@@ -67,25 +58,20 @@ function App({ account, onLogout }: AppProps) {
     reader.readAsText(file)
   }
 
-  const addAgendaItem = useCallback((title: string) => {
-    const clean = title.trim()
-    if (!clean) return
-    setAgendaItems((items) => [clean, ...items])
-  }, [])
-
-  const removeAgendaItem = useCallback((title: string) => {
-    setAgendaItems((items) => {
-      const index = items.findIndex((item) => item === title)
-      if (index < 0) return items
-      return [...items.slice(0, index), ...items.slice(index + 1)]
-    })
-  }, [])
+  if (!ready) {
+    return (
+      <div className={styles.app}>
+        <div className={styles.loadingState}>Syncing your quests…</div>
+      </div>
+    )
+  }
 
   return (
     <div className={styles.app}>
       <NavBar
         active={tab}
         accountName={account.displayName}
+        syncing={syncing}
         onChange={setTab}
         onExport={handleExport}
         onLogout={onLogout}
@@ -93,8 +79,8 @@ function App({ account, onLogout }: AppProps) {
       {tab === 'day' && (
         <AgendaDrawer
           items={agendaItems}
-          onAddItem={addAgendaItem}
-          onRemoveItem={removeAgendaItem}
+          onAddItem={actions.addAgendaItem}
+          onRemoveItem={actions.removeAgendaItem}
         />
       )}
 
@@ -106,12 +92,12 @@ function App({ account, onLogout }: AppProps) {
             actions={actions}
             selectedDate={selectedDate}
             onSelectedDateChange={onSelectedDateChange}
-            onAgendaQuestDropped={removeAgendaItem}
+            onAgendaQuestDropped={actions.removeAgendaItem}
           />
           <QuestInputBar
             selectedDate={selectedDate}
             actions={actions}
-            onAgendaQuestAdded={removeAgendaItem}
+            onAgendaQuestAdded={actions.removeAgendaItem}
           />
         </div>
       )}
@@ -137,7 +123,7 @@ function App({ account, onLogout }: AppProps) {
                 habits={habits}
                 actions={actions}
                 active={d.date === today}
-                onAgendaQuestDropped={removeAgendaItem}
+                onAgendaQuestDropped={actions.removeAgendaItem}
               />
             ))}
           </div>

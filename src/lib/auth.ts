@@ -1,70 +1,68 @@
-export interface LocalAccount {
-  username: string
-  password: string
-  displayName: string
-  storageId: string
-}
+import type { Session } from '@supabase/supabase-js'
+import { supabase, supabaseConfigured } from './supabase'
 
 export interface ActiveAccount {
+  userId: string
   username: string
   displayName: string
-  storageId: string
 }
 
-const ACTIVE_ACCOUNT_KEY = 'life-quest-active-account'
+const AUTH_DOMAIN = import.meta.env.VITE_AUTH_EMAIL_DOMAIN?.trim() || 'life-quest.app'
 
-const rawAccounts: LocalAccount[] = [
-  {
-    username: import.meta.env.VITE_ACCOUNT_1_USERNAME ?? '',
-    password: import.meta.env.VITE_ACCOUNT_1_PASSWORD ?? '',
-    displayName: import.meta.env.VITE_ACCOUNT_1_NAME ?? '',
-    storageId: 'account-1',
-  },
-  {
-    username: import.meta.env.VITE_ACCOUNT_2_USERNAME ?? '',
-    password: import.meta.env.VITE_ACCOUNT_2_PASSWORD ?? '',
-    displayName: import.meta.env.VITE_ACCOUNT_2_NAME ?? '',
-    storageId: 'account-2',
-  },
-]
+const displayNames = new Map<string, string>(
+  [
+    [import.meta.env.VITE_ACCOUNT_1_USERNAME, import.meta.env.VITE_ACCOUNT_1_NAME],
+    [import.meta.env.VITE_ACCOUNT_2_USERNAME, import.meta.env.VITE_ACCOUNT_2_NAME],
+  ]
+    .map(([username, name]) => [String(username ?? '').trim().toLowerCase(), String(name ?? '').trim()] as const)
+    .filter(([username]) => username.length > 0),
+)
 
-export const configuredAccounts = rawAccounts
-  .map((account) => ({
-    ...account,
-    username: account.username.trim(),
-    password: account.password.trim(),
-    displayName: account.displayName.trim() || account.username.trim(),
-  }))
-  .filter((account) => account.username && account.password)
+function authEmail(username: string): string {
+  return `${username.trim().toLowerCase()}@${AUTH_DOMAIN}`
+}
 
-function toActiveAccount(account: LocalAccount): ActiveAccount {
+function accountFromSession(session: Session): ActiveAccount {
+  const email = session.user.email ?? ''
+  const username = email.split('@')[0]?.toLowerCase() ?? 'user'
+  const displayName = displayNames.get(username) || username
+
   return {
-    username: account.username,
-    displayName: account.displayName,
-    storageId: account.storageId,
+    userId: session.user.id,
+    username,
+    displayName,
   }
 }
 
-export function signIn(username: string, password: string): ActiveAccount | null {
-  const cleanUsername = username.trim().toLowerCase()
-  const cleanPassword = password.trim()
-  const account = configuredAccounts.find(
-    (item) => item.username.toLowerCase() === cleanUsername && item.password === cleanPassword,
-  )
+export async function signIn(username: string, password: string): Promise<ActiveAccount | null> {
+  if (!supabaseConfigured || !supabase) return null
 
-  if (!account) return null
-  const activeAccount = toActiveAccount(account)
-  localStorage.setItem(ACTIVE_ACCOUNT_KEY, activeAccount.storageId)
-  return activeAccount
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: authEmail(username),
+    password: password.trim(),
+  })
+
+  if (error || !data.session) return null
+  return accountFromSession(data.session)
 }
 
-export function getRememberedAccount(): ActiveAccount | null {
-  const storageId = localStorage.getItem(ACTIVE_ACCOUNT_KEY)
-  if (!storageId) return null
-  const account = configuredAccounts.find((item) => item.storageId === storageId)
-  return account ? toActiveAccount(account) : null
+export async function restoreSession(): Promise<ActiveAccount | null> {
+  if (!supabaseConfigured || !supabase) return null
+
+  const { data, error } = await supabase.auth.getSession()
+  if (error || !data.session) return null
+  return accountFromSession(data.session)
 }
 
-export function signOut(): void {
-  localStorage.removeItem(ACTIVE_ACCOUNT_KEY)
+export async function signOut(): Promise<void> {
+  if (!supabaseConfigured || !supabase) return
+  await supabase.auth.signOut()
+}
+
+export function isCloudEnabled(): boolean {
+  return supabaseConfigured
+}
+
+export function authEmailHint(username: string): string {
+  return authEmail(username)
 }

@@ -1,18 +1,137 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AppData, DayLog, Recurrence, WorkoutExercise, WorkoutSession } from '../types'
-import { emptyDayLog, loadData, saveData } from '../lib/storage'
+import {
+  fetchCloudSnapshot,
+  hasMeaningfulData,
+  saveCloudSnapshot,
+  subscribeCloudSnapshot,
+} from '../lib/cloud'
+import { emptyDayLog, loadAgendaItems, loadData, saveAgendaItems, saveData } from '../lib/storage'
+import { isCloudEnabled } from '../lib/auth'
 import { tasksForDay } from '../lib/tasks'
+
+const SAVE_DEBOUNCE_MS = 700
 
 export function useAppData(userId: string) {
   const [data, setData] = useState<AppData>(() => loadData(userId))
+  const [agendaItems, setAgendaItems] = useState<string[]>(() => loadAgendaItems(userId))
+  const [ready, setReady] = useState(!isCloudEnabled())
+  const [syncing, setSyncing] = useState(false)
+
+  const skipSaveRef = useRef(true)
+  const saveTimerRef = useRef<number | null>(null)
+  const lastSavedAtRef = useRef(0)
+  const lastRemoteAtRef = useRef('')
+  const applyingRemoteRef = useRef(false)
+
+  const persistSnapshot = useCallback(
+    async (nextData: AppData, nextAgenda: string[]) => {
+      if (!isCloudEnabled()) return
+      setSyncing(true)
+      const updatedAt = await saveCloudSnapshot(userId, nextData, nextAgenda)
+      if (updatedAt) {
+        lastSavedAtRef.current = Date.parse(updatedAt)
+        lastRemoteAtRef.current = updatedAt
+      }
+      setSyncing(false)
+    },
+    [userId],
+  )
+
+  const schedulePersist = useCallback(
+    (nextData: AppData, nextAgenda: string[]) => {
+      saveData(userId, nextData)
+      saveAgendaItems(userId, nextAgenda)
+
+      if (skipSaveRef.current || !isCloudEnabled()) return
+
+      if (saveTimerRef.current != null) {
+        window.clearTimeout(saveTimerRef.current)
+      }
+
+      saveTimerRef.current = window.setTimeout(() => {
+        void persistSnapshot(nextData, nextAgenda)
+      }, SAVE_DEBOUNCE_MS)
+    },
+    [persistSnapshot, userId],
+  )
 
   useEffect(() => {
-    setData(loadData(userId))
-  }, [userId])
+    let cancelled = false
+
+    async function bootstrap() {
+      skipSaveRef.current = true
+      setReady(false)
+
+      const localData = loadData(userId)
+      const localAgenda = loadAgendaItems(userId)
+
+      if (!isCloudEnabled()) {
+        if (!cancelled) {
+          setData(localData)
+          setAgendaItems(localAgenda)
+          skipSaveRef.current = false
+          setReady(true)
+        }
+        return
+      }
+
+      const cloud = await fetchCloudSnapshot(userId)
+      if (cancelled) return
+
+      if (cloud) {
+        lastRemoteAtRef.current = cloud.updated_at
+        lastSavedAtRef.current = Date.parse(cloud.updated_at)
+        setData(cloud.app_data)
+        setAgendaItems(cloud.agenda)
+        saveData(userId, cloud.app_data)
+        saveAgendaItems(userId, cloud.agenda)
+      } else if (hasMeaningfulData(localData) || localAgenda.length > 0) {
+        setData(localData)
+        setAgendaItems(localAgenda)
+        await persistSnapshot(localData, localAgenda)
+      } else {
+        setData(localData)
+        setAgendaItems(localAgenda)
+      }
+
+      skipSaveRef.current = false
+      setReady(true)
+    }
+
+    void bootstrap()
+
+    return () => {
+      cancelled = true
+      if (saveTimerRef.current != null) window.clearTimeout(saveTimerRef.current)
+    }
+  }, [persistSnapshot, userId])
 
   useEffect(() => {
-    saveData(userId, data)
-  }, [data, userId])
+    if (!isCloudEnabled() || !ready) return
+
+    return subscribeCloudSnapshot(userId, (snapshot) => {
+      const remoteTime = Date.parse(snapshot.updated_at)
+      if (remoteTime <= lastSavedAtRef.current) return
+      if (snapshot.updated_at === lastRemoteAtRef.current) return
+
+      applyingRemoteRef.current = true
+      lastRemoteAtRef.current = snapshot.updated_at
+      lastSavedAtRef.current = remoteTime
+      setData(snapshot.app_data)
+      setAgendaItems(snapshot.agenda)
+      saveData(userId, snapshot.app_data)
+      saveAgendaItems(userId, snapshot.agenda)
+      window.setTimeout(() => {
+        applyingRemoteRef.current = false
+      }, 0)
+    })
+  }, [ready, userId])
+
+  useEffect(() => {
+    if (skipSaveRef.current || applyingRemoteRef.current) return
+    schedulePersist(data, agendaItems)
+  }, [agendaItems, data, schedulePersist])
 
   const update = useCallback((fn: (prev: AppData) => AppData) => {
     setData(fn)
@@ -174,11 +293,32 @@ export function useAppData(userId: string) {
     [update],
   )
 
+  const replaceData = useCallback((nextData: AppData) => {
+    setData(nextData)
+  }, [])
+
+  const addAgendaItem = useCallback((title: string) => {
+    const clean = title.trim()
+    if (!clean) return
+    setAgendaItems((items) => [clean, ...items])
+  }, [])
+
+  const removeAgendaItem = useCallback((title: string) => {
+    setAgendaItems((items) => {
+      const index = items.findIndex((item) => item === title)
+      if (index < 0) return items
+      return [...items.slice(0, index), ...items.slice(index + 1)]
+    })
+  }, [])
+
   const sortedHabits = [...data.habits].sort((a, b) => a.order - b.order)
 
   return {
     data,
     habits: sortedHabits,
+    agendaItems,
+    ready,
+    syncing,
     getDayLog,
     toggleTask,
     updateDayField,
@@ -188,7 +328,9 @@ export function useAppData(userId: string) {
     createWorkout,
     deleteWorkout,
     updateExercise,
-    setData,
+    setData: replaceData,
+    addAgendaItem,
+    removeAgendaItem,
   }
 }
 

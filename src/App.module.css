@@ -7,6 +7,14 @@
   overflow: hidden;
 }
 
+.loadingState {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
 .dayPage {
   flex: 1;
   display: flex;

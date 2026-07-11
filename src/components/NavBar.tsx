@@ -11,6 +11,7 @@ const TABS: { id: Tab; label: string }[] = [
 interface NavBarProps {
   active: Tab
   accountName: string
+  syncing?: boolean
   onChange: (tab: Tab) => void
   onExport: () => void
   onLogout: () => void
@@ -51,11 +52,12 @@ function TabIcon({ id }: { id: Tab }) {
   )
 }
 
-export function NavBar({ active, accountName, onChange, onExport, onLogout }: NavBarProps) {
+export function NavBar({ active, accountName, syncing = false, onChange, onExport, onLogout }: NavBarProps) {
   return (
     <nav className={styles.nav}>
       <div className={styles.account} title={accountName}>
         {accountName.slice(0, 1).toUpperCase()}
+        {syncing && <span className={styles.syncDot} aria-label="Syncing" />}
       </div>
       <div className={styles.tabs}>
         {TABS.map((t) => (

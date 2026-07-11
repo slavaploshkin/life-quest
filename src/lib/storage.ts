@@ -11,7 +11,7 @@ function agendaKey(userId: string): string {
   return `${AGENDA_KEY}:${userId}`
 }
 
-function defaultData(): AppData {
+export function defaultData(): AppData {
   return {
     habits: [],
     dayLogs: {},
@@ -28,22 +28,23 @@ function migrateDayLog(log: DayLog): DayLog {
   return { ...log, extraTasks: log.extraTasks ?? [] }
 }
 
+export function normalizeAppData(raw: AppData | null | undefined): AppData {
+  if (!raw) return defaultData()
+  return {
+    ...defaultData(),
+    ...raw,
+    habits: (raw.habits ?? []).map(migrateHabit),
+    dayLogs: Object.fromEntries(
+      Object.entries(raw.dayLogs ?? {}).map(([key, value]) => [key, migrateDayLog(value as DayLog)]),
+    ),
+  }
+}
+
 export function loadData(userId: string): AppData {
   try {
-    const v3 = localStorage.getItem(storageKey(userId))
-    if (v3) {
-      const parsed = JSON.parse(v3) as AppData
-      return {
-        ...defaultData(),
-        ...parsed,
-        habits: (parsed.habits ?? []).map(migrateHabit),
-        dayLogs: Object.fromEntries(
-          Object.entries(parsed.dayLogs ?? {}).map(([k, v]) => [k, migrateDayLog(v as DayLog)]),
-        ),
-      }
-    }
-    // Fresh start — ignore old v1/v2 task lists
-    return defaultData()
+    const saved = localStorage.getItem(storageKey(userId))
+    if (!saved) return defaultData()
+    return normalizeAppData(JSON.parse(saved) as AppData)
   } catch {
     return defaultData()
   }
@@ -70,14 +71,7 @@ export function exportData(data: AppData): string {
 }
 
 export function importData(userId: string, json: string): AppData {
-  const parsed = JSON.parse(json) as AppData
-  const data = {
-    ...parsed,
-    habits: (parsed.habits ?? []).map(migrateHabit),
-    dayLogs: Object.fromEntries(
-      Object.entries(parsed.dayLogs ?? {}).map(([k, v]) => [k, migrateDayLog(v as DayLog)]),
-    ),
-  }
+  const data = normalizeAppData(JSON.parse(json) as AppData)
   saveData(userId, data)
   return data
 }

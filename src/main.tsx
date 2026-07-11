@@ -7,7 +7,7 @@ import { PasscodeGate } from './components/PasscodeGate'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <PasscodeGate>
-      {({ account, logout }) => <App key={account.storageId} account={account} onLogout={logout} />}
+      {({ account, logout }) => <App key={account.userId} account={account} onLogout={logout} />}
     </PasscodeGate>
   </StrictMode>,
 )

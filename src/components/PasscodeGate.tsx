@@ -1,7 +1,7 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import {
-  configuredAccounts,
-  getRememberedAccount,
+  isCloudEnabled,
+  restoreSession,
   signIn,
   signOut,
   type ActiveAccount,
@@ -13,27 +13,69 @@ interface PasscodeGateProps {
 }
 
 export function PasscodeGate({ children }: PasscodeGateProps) {
-  const [account, setAccount] = useState<ActiveAccount | null>(() => getRememberedAccount())
+  const [account, setAccount] = useState<ActiveAccount | null>(null)
+  const [booting, setBooting] = useState(true)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
-  const logout = () => {
-    signOut()
+  useEffect(() => {
+    let cancelled = false
+
+    async function boot() {
+      if (!isCloudEnabled()) {
+        if (!cancelled) {
+          setBooting(false)
+          setError('Cloud sync is not configured yet')
+        }
+        return
+      }
+
+      const remembered = await restoreSession()
+      if (!cancelled) {
+        setAccount(remembered)
+        setBooting(false)
+      }
+    }
+
+    void boot()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const logout = async () => {
+    await signOut()
     setAccount(null)
     setPassword('')
   }
 
+  if (booting) {
+    return (
+      <div className={styles.screen}>
+        <div className={styles.card}>
+          <p className={styles.label}>Life Quest</p>
+          <h1 className={styles.title}>Loading your space…</h1>
+        </div>
+      </div>
+    )
+  }
+
   if (account) return children({ account, logout })
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (configuredAccounts.length === 0) {
-      setError('Accounts are not configured yet')
+    if (!isCloudEnabled()) {
+      setError('Cloud sync is not configured yet')
       return
     }
 
-    const nextAccount = signIn(username, password)
+    setSubmitting(true)
+    const nextAccount = await signIn(username, password)
+    setSubmitting(false)
+
     if (nextAccount) {
       setAccount(nextAccount)
       setError('')
@@ -53,7 +95,9 @@ export function PasscodeGate({ children }: PasscodeGateProps) {
         </div>
         <p className={styles.label}>Life Quest</p>
         <h1 className={styles.title}>Enter your account</h1>
-        <p className={styles.subtitle}>Your quests, days, workouts, and agenda stay separate.</p>
+        <p className={styles.subtitle}>
+          Your quests sync across phone and computer in real time.
+        </p>
 
         <label className={styles.field}>
           <span>Login</span>
@@ -68,6 +112,7 @@ export function PasscodeGate({ children }: PasscodeGateProps) {
               setError('')
             }}
             autoFocus
+            disabled={submitting}
           />
         </label>
 
@@ -83,13 +128,14 @@ export function PasscodeGate({ children }: PasscodeGateProps) {
               setPassword(e.target.value)
               setError('')
             }}
+            disabled={submitting}
           />
         </label>
 
         {error && <p className={styles.error}>{error}</p>}
 
-        <button className={styles.button} type="submit">
-          Enter private space
+        <button className={styles.button} type="submit" disabled={submitting}>
+          {submitting ? 'Signing in…' : 'Enter private space'}
         </button>
 
         <p className={styles.rememberNote}>This device remembers the account until you log out.</p>
