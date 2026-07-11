@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { format, addDays, parseISO } from 'date-fns'
 import type { AppActions } from '../hooks/useAppData'
 import type { Habit } from '../types'
@@ -20,132 +20,269 @@ export function InfiniteDayScroll({
   onSelectedDateChange,
   onAgendaQuestDropped,
 }: InfiniteDayScrollProps) {
-  const startX = useRef<number | null>(null)
-  const startY = useRef<number | null>(null)
-  const lastX = useRef(0)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([])
+  const pos = useRef(0)
+  const targetPos = useRef(0)
+  const settleRaf = useRef<number | null>(null)
+  const renderQueued = useRef(false)
+  const dragging = useRef(false)
+  const lockHorizontal = useRef<boolean | null>(null)
+  const startX = useRef(0)
+  const startY = useRef(0)
+  const startPos = useRef(0)
+  const lastPos = useRef(0)
   const lastT = useRef(0)
-  const velocityX = useRef(0)
-  const wheelLock = useRef(false)
-  const [direction, setDirection] = useState<'next' | 'prev' | null>(null)
-  const [dragOffset, setDragOffset] = useState(0)
-  const [isDragging, setIsDragging] = useState(false)
+  const velocityPos = useRef(0)
+  const wheelIdleTimer = useRef<number | null>(null)
+  const wheelRaf = useRef<number | null>(null)
+  const wheelVelocity = useRef(0)
+  const wheelLastT = useRef(0)
 
   const dates = useMemo(() => {
     const center = parseISO(selectedDate)
-    return [addDays(center, -1), center, addDays(center, 1)].map((date) =>
-      format(date, 'yyyy-MM-dd'),
+    return [-2, -1, 0, 1, 2].map((offset) =>
+      format(addDays(center, offset), 'yyyy-MM-dd'),
     )
   }, [selectedDate])
 
-  const shiftDay = (delta: number) => {
-    setDirection(delta > 0 ? 'next' : 'prev')
-    onSelectedDateChange(format(addDays(parseISO(selectedDate), delta), 'yyyy-MM-dd'))
-    window.setTimeout(() => setDirection(null), 240)
-  }
+  const metrics = useCallback(() => {
+    const width = rootRef.current?.clientWidth ?? window.innerWidth
+    if (width < 640) {
+      return { activeZ: 90, sideX: 130, sideZ: -135, sideRot: 24, activeScale: 0.98, sideScale: 0.78, sideOpacity: 0.72 }
+    }
+    if (width < 900) {
+      return { activeZ: 120, sideX: 220, sideZ: -110, sideRot: 26, activeScale: 1, sideScale: 0.82, sideOpacity: 0.74 }
+    }
+    return { activeZ: 95, sideX: 310, sideZ: -235, sideRot: 30, activeScale: 1, sideScale: 0.76, sideOpacity: 0.66 }
+  }, [])
 
-  const elasticDrag = (value: number) => {
-    const limit = 150
-    const abs = Math.abs(value)
-    if (abs <= limit) return value
-    return Math.sign(value) * (limit + (abs - limit) * 0.28)
-  }
+  const renderPhysics = useCallback(() => {
+    const config = metrics()
+    cardRefs.current.forEach((card, index) => {
+      if (!card) return
+      const offset = index - 2 - pos.current
+      const abs = Math.abs(offset)
+      const sign = offset >= 0 ? 1 : -1
+      const clamped = Math.min(abs, 1)
+      let x: number
+      let z: number
+      let rotation: number
+      let scale: number
+      let opacity: number
 
-  const resetDrag = () => {
-    startX.current = null
-    startY.current = null
-    velocityX.current = 0
-    setIsDragging(false)
-    setDragOffset(0)
-  }
+      if (abs <= 1) {
+        x = config.sideX * offset
+        z = config.activeZ + (config.sideZ - config.activeZ) * clamped
+        rotation = -config.sideRot * offset
+        scale = config.activeScale + (config.sideScale - config.activeScale) * clamped
+        opacity = 1 + (config.sideOpacity - 1) * clamped
+      } else {
+        const fade = Math.min(abs - 1, 1)
+        x = config.sideX * sign * (1 - fade * 0.55)
+        z = config.sideZ - 180 * fade
+        rotation = -config.sideRot * sign * (1 - fade * 0.2)
+        scale = config.sideScale - 0.2 * fade
+        opacity = Math.max(0, config.sideOpacity * (1 - fade))
+      }
 
-  const finishDrag = () => {
-    if (startX.current == null) return
-    const projected = dragOffset + velocityX.current * 170
-    const threshold = 62
+      card.style.transform = `translate3d(calc(-50% + ${x.toFixed(1)}px), -50%, ${z.toFixed(1)}px) rotateY(${rotation.toFixed(2)}deg) scale(${scale.toFixed(3)})`
+      card.style.opacity = opacity.toFixed(3)
+      card.style.zIndex = String(Math.round(100 - abs * 24))
+      card.style.pointerEvents = abs < 0.62 ? 'auto' : 'none'
+    })
+  }, [metrics])
 
-    if (projected < -threshold) {
-      resetDrag()
-      shiftDay(1)
+  const scheduleRender = useCallback(() => {
+    if (renderQueued.current) return
+    renderQueued.current = true
+    window.requestAnimationFrame(() => {
+      renderQueued.current = false
+      renderPhysics()
+    })
+  }, [renderPhysics])
+
+  const cancelSettle = useCallback(() => {
+    if (settleRaf.current != null) {
+      window.cancelAnimationFrame(settleRaf.current)
+      settleRaf.current = null
+    }
+  }, [])
+
+  const commitDate = useCallback(
+    (delta: number) => {
+      const cleanDelta = Math.max(-2, Math.min(2, Math.round(delta)))
+      pos.current = 0
+      targetPos.current = 0
+      rootRef.current?.classList.remove(styles.dragging)
+      if (cleanDelta !== 0) {
+        onSelectedDateChange(format(addDays(parseISO(selectedDate), cleanDelta), 'yyyy-MM-dd'))
+      } else {
+        renderPhysics()
+      }
+    },
+    [onSelectedDateChange, renderPhysics, selectedDate],
+  )
+
+  const startSettle = useCallback(
+    (target: number) => {
+      cancelSettle()
+      targetPos.current = Math.max(-1, Math.min(1, Math.round(target)))
+      rootRef.current?.classList.add(styles.dragging)
+
+      const settleStep = () => {
+        pos.current += (targetPos.current - pos.current) * 0.24
+        if (Math.abs(targetPos.current - pos.current) < 0.002) {
+          const finalDelta = targetPos.current
+          settleRaf.current = null
+          pos.current = finalDelta
+          renderPhysics()
+          commitDate(finalDelta)
+          return
+        }
+        renderPhysics()
+        settleRaf.current = window.requestAnimationFrame(settleStep)
+      }
+
+      settleRaf.current = window.requestAnimationFrame(settleStep)
+    },
+    [cancelSettle, commitDate, renderPhysics],
+  )
+
+  const endDrag = useCallback(() => {
+    if (!dragging.current) return
+    dragging.current = false
+    if (lockHorizontal.current !== true) {
+      rootRef.current?.classList.remove(styles.dragging)
       return
     }
+    const projected = pos.current + velocityPos.current * 115
+    const base = Math.round(pos.current)
+    const target = Math.max(base - 1, Math.min(base + 1, Math.round(projected)))
+    startSettle(target)
+  }, [startSettle])
 
-    if (projected > threshold) {
-      resetDrag()
-      shiftDay(-1)
-      return
+  useEffect(() => {
+    pos.current = 0
+    targetPos.current = 0
+    renderPhysics()
+  }, [renderPhysics, selectedDate])
+
+  useEffect(() => {
+    const onResize = () => renderPhysics()
+    window.addEventListener('resize', onResize)
+    return () => {
+      window.removeEventListener('resize', onResize)
+      cancelSettle()
+      if (wheelIdleTimer.current != null) window.clearTimeout(wheelIdleTimer.current)
+      if (wheelRaf.current != null) window.cancelAnimationFrame(wheelRaf.current)
     }
-
-    resetDrag()
-  }
+  }, [cancelSettle, renderPhysics])
 
   const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    const intent = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
-    if (Math.abs(intent) < 28 || wheelLock.current) return
-    wheelLock.current = true
-    shiftDay(intent > 0 ? 1 : -1)
-    window.setTimeout(() => {
-      wheelLock.current = false
-    }, 320)
-  }
+    const dx = event.deltaMode === 1 ? event.deltaX * 16 : event.deltaX
+    const dy = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY
+    if (Math.abs(dx) < 3 || Math.abs(dx) <= Math.abs(dy) * 1.35) return
+    event.preventDefault()
 
-  const dragProgress = Math.min(Math.abs(dragOffset) / 150, 1)
+    const now = performance.now()
+    if (wheelRaf.current != null) {
+      window.cancelAnimationFrame(wheelRaf.current)
+      wheelRaf.current = null
+    }
+    if (wheelLastT.current === 0) wheelLastT.current = now
+    const dt = Math.max((now - wheelLastT.current) / 1000, 0.016)
+    const delta = Math.max(-80, Math.min(80, dx)) / 118
+    const next = Math.max(-1.15, Math.min(1.15, pos.current + delta))
+
+    wheelVelocity.current = Math.max(-8, Math.min(8, (next - pos.current) / dt))
+    pos.current = next
+    wheelLastT.current = now
+    rootRef.current?.classList.add(styles.dragging)
+    scheduleRender()
+
+    if (wheelIdleTimer.current != null) window.clearTimeout(wheelIdleTimer.current)
+    wheelIdleTimer.current = window.setTimeout(() => {
+      const target = Math.round(pos.current + wheelVelocity.current * 0.14)
+      wheelLastT.current = 0
+      startSettle(target)
+    }, 90)
+  }
 
   return (
     <div className={styles.wrap}>
       <div
-        className={`${styles.track} ${direction ? styles[direction] : ''} ${isDragging ? styles.dragging : ''}`}
-        style={
-          {
-            '--drag-x': `${dragOffset}px`,
-            '--drag-progress': dragProgress,
-          } as CSSProperties
-        }
+        ref={rootRef}
+        className={styles.track}
         onWheel={handleWheel}
         onPointerDown={(event) => {
-          if (event.button !== 0) return
+          if (event.pointerType === 'mouse') return
           const target = event.target as HTMLElement
           if (target.closest('button,input,textarea,select,summary')) return
 
+          dragging.current = true
+          lockHorizontal.current = null
           startX.current = event.clientX
           startY.current = event.clientY
-          lastX.current = event.clientX
-          lastT.current = performance.now()
-          velocityX.current = 0
-          setIsDragging(true)
-          event.currentTarget.setPointerCapture(event.pointerId)
+          startPos.current = pos.current
+          lastPos.current = pos.current
+          lastT.current = event.timeStamp
+          velocityPos.current = 0
+          cancelSettle()
+          rootRef.current?.classList.add(styles.dragging)
         }}
         onPointerMove={(event) => {
-          if (startX.current == null || startY.current == null) return
+          if (!dragging.current) return
 
           const dx = event.clientX - startX.current
           const dy = event.clientY - startY.current
-          if (Math.abs(dy) > Math.abs(dx) * 1.35 && Math.abs(dy) > 18) {
-            resetDrag()
-            return
+
+          if (lockHorizontal.current === null) {
+            if (Math.abs(dx) <= 6 && Math.abs(dy) <= 6) return
+            lockHorizontal.current = Math.abs(dx) > Math.abs(dy)
+            if (!lockHorizontal.current) {
+              dragging.current = false
+              rootRef.current?.classList.remove(styles.dragging)
+              return
+            }
+            event.currentTarget.setPointerCapture(event.pointerId)
           }
 
-          const now = performance.now()
-          const dt = Math.max(now - lastT.current, 1)
-          velocityX.current = (event.clientX - lastX.current) / dt
-          lastX.current = event.clientX
-          lastT.current = now
-          setDragOffset(elasticDrag(dx))
+          if (event.cancelable) event.preventDefault()
+          const spacing = Math.max(170, (rootRef.current?.clientWidth ?? 320) * 0.54)
+          pos.current = Math.max(-1.18, Math.min(1.18, startPos.current - dx / spacing))
+          scheduleRender()
+
+          const dt = event.timeStamp - lastT.current
+          if (dt > 0) {
+            velocityPos.current = (pos.current - lastPos.current) / dt
+            lastPos.current = pos.current
+            lastT.current = event.timeStamp
+          }
         }}
-        onPointerUp={finishDrag}
-        onPointerCancel={resetDrag}
-        onLostPointerCapture={finishDrag}
-        onDoubleClick={() => {
-          setDragOffset(0)
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onLostPointerCapture={endDrag}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowLeft') startSettle(-1)
+          if (event.key === 'ArrowRight') startSettle(1)
         }}
+        tabIndex={0}
       >
         {dates.map((date, index) => (
-          <div key={date} className={`${styles.cardWrap} ${index === 1 ? styles.centerCard : ''}`}>
+          <div
+            key={`${date}-${index}`}
+            ref={(node) => {
+              cardRefs.current[index] = node
+            }}
+            className={`${styles.cardWrap} ${index === 2 ? styles.centerCard : ''}`}
+          >
             <DayColumn
               date={date}
               log={actions.getDayLog(date)}
               habits={habits}
               actions={actions}
-              active={date === selectedDate}
+              active={index === 2}
               showAddQuest={false}
               onAgendaQuestDropped={onAgendaQuestDropped}
             />
