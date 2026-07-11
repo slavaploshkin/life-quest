@@ -24,7 +24,10 @@ export function InfiniteDayScroll({
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
   const scrollEndTimer = useRef<number | null>(null)
   const clickSelectTimer = useRef<number | null>(null)
+  const programmaticScroll = useRef(false)
+  const programmaticScrollTimer = useRef<number | null>(null)
   const [dragging, setDragging] = useState(false)
+  const [pendingDate, setPendingDate] = useState<string | null>(null)
 
   const dates = useMemo(() => {
     const center = parseISO(selectedDate)
@@ -69,11 +72,13 @@ export function InfiniteDayScroll({
     return () => {
       if (scrollEndTimer.current != null) window.clearTimeout(scrollEndTimer.current)
       if (clickSelectTimer.current != null) window.clearTimeout(clickSelectTimer.current)
+      if (programmaticScrollTimer.current != null) window.clearTimeout(programmaticScrollTimer.current)
     }
   }, [])
 
   const commitNearestDate = useCallback(() => {
     const nearestDate = nearestDateToCenter()
+    setPendingDate(null)
     if (nearestDate !== selectedDate) {
       onSelectedDateChange(nearestDate)
     } else {
@@ -82,10 +87,11 @@ export function InfiniteDayScroll({
   }, [centerSelectedCard, nearestDateToCenter, onSelectedDateChange, selectedDate])
 
   const scheduleCommit = useCallback(() => {
+    if (programmaticScroll.current) return
     if (scrollEndTimer.current != null) {
       window.clearTimeout(scrollEndTimer.current)
     }
-    scrollEndTimer.current = window.setTimeout(commitNearestDate, 65)
+    scrollEndTimer.current = window.setTimeout(commitNearestDate, 80)
   }, [commitNearestDate])
 
   const stepDay = useCallback(
@@ -104,7 +110,12 @@ export function InfiniteDayScroll({
 
       if (scrollEndTimer.current != null) window.clearTimeout(scrollEndTimer.current)
       if (clickSelectTimer.current != null) window.clearTimeout(clickSelectTimer.current)
+      if (programmaticScrollTimer.current != null) {
+        window.clearTimeout(programmaticScrollTimer.current)
+      }
 
+      programmaticScroll.current = true
+      setPendingDate(date)
       cardRefs.current[index]?.scrollIntoView({
         behavior: 'smooth',
         block: 'nearest',
@@ -112,8 +123,14 @@ export function InfiniteDayScroll({
       })
 
       clickSelectTimer.current = window.setTimeout(() => {
+        programmaticScroll.current = false
+        setPendingDate(null)
         onSelectedDateChange(date)
-      }, 120)
+      }, 360)
+
+      programmaticScrollTimer.current = window.setTimeout(() => {
+        programmaticScroll.current = false
+      }, 420)
     },
     [onSelectedDateChange, selectedDate],
   )
@@ -145,7 +162,7 @@ export function InfiniteDayScroll({
             ref={(node) => {
               cardRefs.current[index] = node
             }}
-            className={`${styles.cardWrap} ${date === selectedDate ? styles.centerCard : ''}`}
+            className={`${styles.cardWrap} ${date === (pendingDate ?? selectedDate) ? styles.centerCard : ''}`}
             onClickCapture={(event) => selectCard(event, date, index)}
           >
             <DayColumn
