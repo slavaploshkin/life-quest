@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { format, addDays, parseISO } from 'date-fns'
 import type { AppActions } from '../hooks/useAppData'
 import type { Habit } from '../types'
@@ -23,6 +23,7 @@ export function InfiniteDayScroll({
   const trackRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
   const scrollEndTimer = useRef<number | null>(null)
+  const clickSelectTimer = useRef<number | null>(null)
   const [dragging, setDragging] = useState(false)
 
   const dates = useMemo(() => {
@@ -64,6 +65,13 @@ export function InfiniteDayScroll({
     centerSelectedCard('auto')
   }, [centerSelectedCard, selectedDate])
 
+  useEffect(() => {
+    return () => {
+      if (scrollEndTimer.current != null) window.clearTimeout(scrollEndTimer.current)
+      if (clickSelectTimer.current != null) window.clearTimeout(clickSelectTimer.current)
+    }
+  }, [])
+
   const commitNearestDate = useCallback(() => {
     const nearestDate = nearestDateToCenter()
     if (nearestDate !== selectedDate) {
@@ -77,12 +85,35 @@ export function InfiniteDayScroll({
     if (scrollEndTimer.current != null) {
       window.clearTimeout(scrollEndTimer.current)
     }
-    scrollEndTimer.current = window.setTimeout(commitNearestDate, 110)
+    scrollEndTimer.current = window.setTimeout(commitNearestDate, 65)
   }, [commitNearestDate])
 
   const stepDay = useCallback(
     (delta: number) => {
       onSelectedDateChange(format(addDays(parseISO(selectedDate), delta), 'yyyy-MM-dd'))
+    },
+    [onSelectedDateChange, selectedDate],
+  )
+
+  const selectCard = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>, date: string, index: number) => {
+      if (date === selectedDate) return
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      if (scrollEndTimer.current != null) window.clearTimeout(scrollEndTimer.current)
+      if (clickSelectTimer.current != null) window.clearTimeout(clickSelectTimer.current)
+
+      cardRefs.current[index]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      })
+
+      clickSelectTimer.current = window.setTimeout(() => {
+        onSelectedDateChange(date)
+      }, 120)
     },
     [onSelectedDateChange, selectedDate],
   )
@@ -115,6 +146,7 @@ export function InfiniteDayScroll({
               cardRefs.current[index] = node
             }}
             className={`${styles.cardWrap} ${date === selectedDate ? styles.centerCard : ''}`}
+            onClickCapture={(event) => selectCard(event, date, index)}
           >
             <DayColumn
               date={date}

@@ -45,13 +45,19 @@
   min-height: 0;
   scroll-snap-align: center;
   scroll-snap-stop: always;
-  opacity: 0.48;
-  transform: scale(0.94);
+  opacity: 0.56;
+  transform: scale(0.955);
   transition:
-    opacity 0.24s ease,
-    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    filter 0.28s ease;
+    opacity 0.18s ease,
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.22s ease;
   will-change: transform;
+  cursor: pointer;
+}
+
+.cardWrap:hover {
+  opacity: 0.72;
+  transform: scale(0.97);
 }
 
 .centerCard {
@@ -59,6 +65,12 @@
   opacity: 1;
   transform: scale(1);
   filter: drop-shadow(0 18px 42px rgba(0, 0, 0, 0.26));
+  cursor: default;
+}
+
+.centerCard:hover {
+  opacity: 1;
+  transform: scale(1);
 }
 
 @media (min-width: 768px) {
