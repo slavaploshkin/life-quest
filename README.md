@@ -71,12 +71,14 @@ npx vercel
 |------|-------|
 | `VITE_SUPABASE_URL` | Project URL из Supabase |
 | `VITE_SUPABASE_ANON_KEY` | anon public key |
-| `VITE_ACCOUNT_1_USERNAME` | логин (без @) |
+| `VITE_ACCOUNT_1_USERNAME` | первый логин |
+| `VITE_ACCOUNT_1_PASSWORD` | первый пароль |
 | `VITE_ACCOUNT_1_NAME` | имя в меню |
 | `VITE_ACCOUNT_2_USERNAME` | второй логин |
+| `VITE_ACCOUNT_2_PASSWORD` | второй пароль |
 | `VITE_ACCOUNT_2_NAME` | второе имя |
 
-В Supabase создай пользователей с email `{логин}@life-quest.app` и своим паролем.
+В Supabase создавать пользователей вручную **не нужно** — приложение сделает это при первом входе со старым логином и паролем.
 
 Production + Preview → Save → **Redeploy**.
 

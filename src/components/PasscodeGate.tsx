@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import {
+  configuredAccounts,
   isCloudEnabled,
   restoreSession,
   signIn,
@@ -24,10 +25,10 @@ export function PasscodeGate({ children }: PasscodeGateProps) {
     let cancelled = false
 
     async function boot() {
-      if (!isCloudEnabled()) {
+      if (configuredAccounts.length === 0) {
         if (!cancelled) {
           setBooting(false)
-          setError('Cloud sync is not configured yet')
+          setError('Accounts are not configured yet')
         }
         return
       }
@@ -67,8 +68,8 @@ export function PasscodeGate({ children }: PasscodeGateProps) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isCloudEnabled()) {
-      setError('Cloud sync is not configured yet')
+    if (configuredAccounts.length === 0) {
+      setError('Accounts are not configured yet')
       return
     }
 
@@ -96,7 +97,9 @@ export function PasscodeGate({ children }: PasscodeGateProps) {
         <p className={styles.label}>Life Quest</p>
         <h1 className={styles.title}>Enter your account</h1>
         <p className={styles.subtitle}>
-          Your quests sync across phone and computer in real time.
+          {isCloudEnabled()
+            ? 'Your quests sync across phone and computer in real time.'
+            : 'Your quests, days, workouts, and agenda stay separate.'}
         </p>
 
         <label className={styles.field}>

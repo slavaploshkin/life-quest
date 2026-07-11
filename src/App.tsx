@@ -21,7 +21,7 @@ interface AppProps {
 }
 
 function App({ account, onLogout }: AppProps) {
-  const actions = useAppData(account.userId)
+  const actions = useAppData(account.userId, account.storageId)
   const { data, habits, agendaItems, ready, syncing } = actions
   const [tab, setTab] = useState<Tab>('day')
   const [anchor, setAnchor] = useState(new Date())

@@ -12,9 +12,10 @@ import { tasksForDay } from '../lib/tasks'
 
 const SAVE_DEBOUNCE_MS = 700
 
-export function useAppData(userId: string) {
-  const [data, setData] = useState<AppData>(() => loadData(userId))
-  const [agendaItems, setAgendaItems] = useState<string[]>(() => loadAgendaItems(userId))
+export function useAppData(userId: string, storageId?: string) {
+  const localKey = storageId ?? userId
+  const [data, setData] = useState<AppData>(() => loadData(localKey))
+  const [agendaItems, setAgendaItems] = useState<string[]>(() => loadAgendaItems(localKey))
   const [ready, setReady] = useState(!isCloudEnabled())
   const [syncing, setSyncing] = useState(false)
 
@@ -40,8 +41,8 @@ export function useAppData(userId: string) {
 
   const schedulePersist = useCallback(
     (nextData: AppData, nextAgenda: string[]) => {
-      saveData(userId, nextData)
-      saveAgendaItems(userId, nextAgenda)
+      saveData(localKey, nextData)
+      saveAgendaItems(localKey, nextAgenda)
 
       if (skipSaveRef.current || !isCloudEnabled()) return
 
@@ -53,7 +54,7 @@ export function useAppData(userId: string) {
         void persistSnapshot(nextData, nextAgenda)
       }, SAVE_DEBOUNCE_MS)
     },
-    [persistSnapshot, userId],
+    [localKey, persistSnapshot, userId],
   )
 
   useEffect(() => {
@@ -63,8 +64,8 @@ export function useAppData(userId: string) {
       skipSaveRef.current = true
       setReady(false)
 
-      const localData = loadData(userId)
-      const localAgenda = loadAgendaItems(userId)
+      const localData = loadData(localKey)
+      const localAgenda = loadAgendaItems(localKey)
 
       if (!isCloudEnabled()) {
         if (!cancelled) {
@@ -84,8 +85,8 @@ export function useAppData(userId: string) {
         lastSavedAtRef.current = Date.parse(cloud.updated_at)
         setData(cloud.app_data)
         setAgendaItems(cloud.agenda)
-        saveData(userId, cloud.app_data)
-        saveAgendaItems(userId, cloud.agenda)
+        saveData(localKey, cloud.app_data)
+        saveAgendaItems(localKey, cloud.agenda)
       } else if (hasMeaningfulData(localData) || localAgenda.length > 0) {
         setData(localData)
         setAgendaItems(localAgenda)
@@ -105,7 +106,7 @@ export function useAppData(userId: string) {
       cancelled = true
       if (saveTimerRef.current != null) window.clearTimeout(saveTimerRef.current)
     }
-  }, [persistSnapshot, userId])
+  }, [localKey, persistSnapshot, userId])
 
   useEffect(() => {
     if (!isCloudEnabled() || !ready) return
@@ -120,13 +121,13 @@ export function useAppData(userId: string) {
       lastSavedAtRef.current = remoteTime
       setData(snapshot.app_data)
       setAgendaItems(snapshot.agenda)
-      saveData(userId, snapshot.app_data)
-      saveAgendaItems(userId, snapshot.agenda)
+      saveData(localKey, snapshot.app_data)
+      saveAgendaItems(localKey, snapshot.agenda)
       window.setTimeout(() => {
         applyingRemoteRef.current = false
       }, 0)
     })
-  }, [ready, userId])
+  }, [localKey, ready, userId])
 
   useEffect(() => {
     if (skipSaveRef.current || applyingRemoteRef.current) return

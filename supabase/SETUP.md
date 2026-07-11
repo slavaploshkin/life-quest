@@ -25,43 +25,18 @@ In Supabase dashboard:
 
 If you still see legacy keys (`eyJ...` **anon**), that works too — same role as Publishable.
 
-## 3. Create two users
+## 3. Login stays the same
 
-1. Open **Authentication** → **Users**
-2. Click **Add user** → **Create new user**
+You still enter **your old login and password** from Vercel env:
 
-For each person create one user:
+- `VITE_ACCOUNT_1_USERNAME` / `VITE_ACCOUNT_1_PASSWORD`
+- `VITE_ACCOUNT_2_USERNAME` / `VITE_ACCOUNT_2_PASSWORD`
 
-| Field | Example |
-|-------|---------|
-| Email | `slava@life-quest.app` |
-| Password | your password |
-| Auto confirm user | ✅ on |
+You do **not** need to create users manually in Supabase.
 
-Important: email must be `{login}@life-quest.app` — the same login you type in the app.
+On first login the app creates the cloud account automatically in the background.
 
-Repeat for the second person, e.g. `joe@life-quest.app`.
-
-## 4. Disable public signup (recommended)
-
-1. **Authentication** → **Providers** → **Email**
-2. Turn off **Enable sign ups** if available, or leave only invited users
-
-Only the two accounts you created manually can log in.
-
-## 5. Optional display names
-
-In Vercel env (or `.env`):
-
-```env
-VITE_ACCOUNT_1_USERNAME=slava
-VITE_ACCOUNT_1_NAME=Slava
-
-VITE_ACCOUNT_2_USERNAME=joe
-VITE_ACCOUNT_2_NAME=Joe
-```
-
-These only change the letter badge in the menu — login still uses Supabase email/password.
+Optional: in Supabase → **Authentication** → **Providers** → **Email**, disable **Confirm email** so first login is instant.
 
 ## How sync works
 
