@@ -4,7 +4,7 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  perspective: 1200px;
+  perspective: 1800px;
   isolation: isolate;
 }
 
@@ -13,7 +13,7 @@
   flex: 1;
   min-height: 0;
   width: 100%;
-  overflow: visible;
+  overflow: hidden;
   touch-action: pan-y pinch-zoom;
   cursor: grab;
   user-select: none;
@@ -27,14 +27,14 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: min(34rem, 80vw);
-  height: 14rem;
-  transform: translate(-50%, -38%) rotateX(68deg) translateZ(-170px);
+  width: min(32rem, 76vw);
+  height: 11rem;
+  transform: translate(-50%, -34%) rotateX(64deg) translateZ(-90px);
   border-radius: 999px;
   pointer-events: none;
   background:
-    radial-gradient(ellipse, rgba(255, 238, 212, 0.1), transparent 68%),
-    radial-gradient(ellipse, rgba(0, 0, 0, 0.3), transparent 70%);
+    radial-gradient(ellipse, rgba(255, 238, 212, 0.08), transparent 68%),
+    radial-gradient(ellipse, rgba(0, 0, 0, 0.24), transparent 70%);
   filter: blur(8px);
 }
 
@@ -46,8 +46,8 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: min(24rem, 70vw);
-  height: calc(100% - 1.5rem);
+  width: min(23.2rem, 70vw);
+  height: calc(100% - 1.35rem);
   min-height: 0;
   transform-style: preserve-3d;
   backface-visibility: hidden;
@@ -62,18 +62,18 @@
 
 @media (min-width: 768px) {
   .cardWrap {
-    width: min(23.75rem, 38vw);
-    height: calc(100% - 1.7rem);
+    width: min(22.75rem, 36vw);
+    height: calc(100% - 1.45rem);
   }
 }
 
 @media (max-width: 640px) {
   .wrap {
-    perspective: 920px;
+    perspective: 1400px;
   }
 
   .cardWrap {
-    width: min(20rem, 78vw);
+    width: min(19.2rem, 74vw);
     height: calc(100% - 1.1rem);
   }
 }

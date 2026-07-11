@@ -5,6 +5,16 @@ import type { Habit } from '../types'
 import { DayColumn } from './DayColumn'
 import styles from './InfiniteDayScroll.module.css'
 
+interface CarouselMetrics {
+  sideX: number
+  activeZ: number
+  sideZ: number
+  sideRot: number
+  activeScale: number
+  sideScale: number
+  sideOpacity: number
+}
+
 interface InfiniteDayScrollProps {
   habits: Habit[]
   actions: AppActions
@@ -25,6 +35,7 @@ export function InfiniteDayScroll({
   const pos = useRef(0)
   const targetPos = useRef(0)
   const settleRaf = useRef<number | null>(null)
+  const settleLastT = useRef(0)
   const renderQueued = useRef(false)
   const dragging = useRef(false)
   const lockHorizontal = useRef<boolean | null>(null)
@@ -49,12 +60,36 @@ export function InfiniteDayScroll({
   const metrics = useCallback(() => {
     const width = rootRef.current?.clientWidth ?? window.innerWidth
     if (width < 640) {
-      return { activeZ: 90, sideX: 130, sideZ: -135, sideRot: 24, activeScale: 0.98, sideScale: 0.78, sideOpacity: 0.72 }
+      return {
+        sideX: Math.min(145, width * 0.38),
+        activeZ: 28,
+        sideZ: -42,
+        sideRot: 3.2,
+        activeScale: 0.98,
+        sideScale: 0.76,
+        sideOpacity: 0.56,
+      } satisfies CarouselMetrics
     }
     if (width < 900) {
-      return { activeZ: 120, sideX: 220, sideZ: -110, sideRot: 26, activeScale: 1, sideScale: 0.82, sideOpacity: 0.74 }
+      return {
+        sideX: Math.min(250, width * 0.34),
+        activeZ: 32,
+        sideZ: -46,
+        sideRot: 3.8,
+        activeScale: 1,
+        sideScale: 0.78,
+        sideOpacity: 0.58,
+      } satisfies CarouselMetrics
     }
-    return { activeZ: 95, sideX: 310, sideZ: -235, sideRot: 30, activeScale: 1, sideScale: 0.76, sideOpacity: 0.66 }
+    return {
+      sideX: Math.min(350, width * 0.36),
+      activeZ: 28,
+      sideZ: -58,
+      sideRot: 4.5,
+      activeScale: 1,
+      sideScale: 0.76,
+      sideOpacity: 0.52,
+    } satisfies CarouselMetrics
   }, [])
 
   const renderPhysics = useCallback(() => {
@@ -79,11 +114,11 @@ export function InfiniteDayScroll({
         opacity = 1 + (config.sideOpacity - 1) * clamped
       } else {
         const fade = Math.min(abs - 1, 1)
-        x = config.sideX * sign * (1 - fade * 0.55)
-        z = config.sideZ - 180 * fade
-        rotation = -config.sideRot * sign * (1 - fade * 0.2)
-        scale = config.sideScale - 0.2 * fade
-        opacity = Math.max(0, config.sideOpacity * (1 - fade))
+        x = config.sideX * sign * (1 - fade * 0.35)
+        z = config.sideZ - 70 * fade
+        rotation = -config.sideRot * sign * (1 - fade * 0.15)
+        scale = config.sideScale - 0.08 * fade
+        opacity = Math.max(0, config.sideOpacity * (1 - fade * 1.15))
       }
 
       card.style.transform = `translate3d(calc(-50% + ${x.toFixed(1)}px), -50%, ${z.toFixed(1)}px) rotateY(${rotation.toFixed(2)}deg) scale(${scale.toFixed(3)})`
@@ -129,9 +164,14 @@ export function InfiniteDayScroll({
       cancelSettle()
       targetPos.current = Math.max(-1, Math.min(1, Math.round(target)))
       rootRef.current?.classList.add(styles.dragging)
+      settleLastT.current = performance.now()
 
       const settleStep = () => {
-        pos.current += (targetPos.current - pos.current) * 0.24
+        const now = performance.now()
+        const dt = Math.min((now - settleLastT.current) / 1000, 0.034)
+        settleLastT.current = now
+        const blend = 1 - Math.exp(-dt * 13.5)
+        pos.current += (targetPos.current - pos.current) * blend
         if (Math.abs(targetPos.current - pos.current) < 0.002) {
           const finalDelta = targetPos.current
           settleRaf.current = null
@@ -156,7 +196,7 @@ export function InfiniteDayScroll({
       rootRef.current?.classList.remove(styles.dragging)
       return
     }
-    const projected = pos.current + velocityPos.current * 115
+    const projected = pos.current + velocityPos.current * 78
     const base = Math.round(pos.current)
     const target = Math.max(base - 1, Math.min(base + 1, Math.round(projected)))
     startSettle(target)
@@ -192,8 +232,8 @@ export function InfiniteDayScroll({
     }
     if (wheelLastT.current === 0) wheelLastT.current = now
     const dt = Math.max((now - wheelLastT.current) / 1000, 0.016)
-    const delta = Math.max(-80, Math.min(80, dx)) / 118
-    const next = Math.max(-1.15, Math.min(1.15, pos.current + delta))
+    const delta = Math.max(-52, Math.min(52, dx)) / 230
+    const next = Math.max(-1.05, Math.min(1.05, pos.current + delta))
 
     wheelVelocity.current = Math.max(-8, Math.min(8, (next - pos.current) / dt))
     pos.current = next
@@ -203,10 +243,10 @@ export function InfiniteDayScroll({
 
     if (wheelIdleTimer.current != null) window.clearTimeout(wheelIdleTimer.current)
     wheelIdleTimer.current = window.setTimeout(() => {
-      const target = Math.round(pos.current + wheelVelocity.current * 0.14)
+      const target = Math.round(pos.current + wheelVelocity.current * 0.08)
       wheelLastT.current = 0
       startSettle(target)
-    }, 90)
+    }, 130)
   }
 
   return (
@@ -216,7 +256,7 @@ export function InfiniteDayScroll({
         className={styles.track}
         onWheel={handleWheel}
         onPointerDown={(event) => {
-          if (event.pointerType === 'mouse') return
+          if (event.pointerType === 'mouse' && event.button !== 0) return
           const target = event.target as HTMLElement
           if (target.closest('button,input,textarea,select,summary')) return
 
@@ -249,8 +289,8 @@ export function InfiniteDayScroll({
           }
 
           if (event.cancelable) event.preventDefault()
-          const spacing = Math.max(170, (rootRef.current?.clientWidth ?? 320) * 0.54)
-          pos.current = Math.max(-1.18, Math.min(1.18, startPos.current - dx / spacing))
+          const spacing = Math.max(240, (rootRef.current?.clientWidth ?? 320) * 0.72)
+          pos.current = Math.max(-1.08, Math.min(1.08, startPos.current - dx / spacing))
           scheduleRender()
 
           const dt = event.timeStamp - lastT.current
