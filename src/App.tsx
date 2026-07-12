@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { format, addDays, subDays } from 'date-fns'
 import { useAppData } from './hooks/useAppData'
 import { weekStats, weekRangeLabel } from './lib/stats'
@@ -25,8 +25,34 @@ function App({ account, onLogout }: AppProps) {
   const { data, habits, agendaItems, ready, syncing, syncError, pushLocalToCloud } = actions
   const [tab, setTab] = useState<Tab>('day')
   const [anchor, setAnchor] = useState(new Date())
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [selectedDate, setSelectedDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
+  const openedDayRef = useRef(format(new Date(), 'yyyy-MM-dd'))
   const importRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const syncToday = () => {
+      const today = format(new Date(), 'yyyy-MM-dd')
+      openedDayRef.current = today
+      setSelectedDate(today)
+      setAnchor(new Date())
+    }
+
+    syncToday()
+
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      const today = format(new Date(), 'yyyy-MM-dd')
+      if (today !== openedDayRef.current) syncToday()
+    }
+
+    const intervalId = window.setInterval(onVisible, 60_000)
+    document.addEventListener('visibilitychange', onVisible)
+
+    return () => {
+      window.clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [])
 
   const onSelectedDateChange = useCallback((date: string) => {
     setSelectedDate(date)
