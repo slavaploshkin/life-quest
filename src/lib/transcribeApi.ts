@@ -30,7 +30,13 @@ export async function transcribeAudio(blob: Blob): Promise<string> {
     }),
   })
 
-  const payload = (await response.json().catch(() => ({}))) as { error?: string; text?: string }
+  const raw = await response.text()
+  let payload: { error?: string; text?: string } = {}
+  try {
+    payload = JSON.parse(raw) as { error?: string; text?: string }
+  } catch {
+    payload = {}
+  }
 
   if (!response.ok) {
     const fallback =
@@ -38,7 +44,9 @@ export async function transcribeAudio(blob: Blob): Promise<string> {
         ? 'Voice API is unavailable — redeploy the app on Vercel.'
         : response.status === 401
           ? 'Log out and sign in again to use the microphone.'
-          : `Transcription failed (${response.status})`
+          : response.status === 413
+            ? 'Recording too long — keep it under 45 seconds.'
+            : raw.trim().slice(0, 220) || `Transcription failed (${response.status})`
     throw new TranscribeApiError(payload.error ?? fallback, response.status)
   }
 

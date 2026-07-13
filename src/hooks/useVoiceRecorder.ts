@@ -3,6 +3,8 @@ import { transcribeAudio, TranscribeApiError } from '../lib/transcribeApi'
 
 const BAR_COUNT = 28
 const CHUNK_MS = 1000
+const WHISPER_SAMPLE_RATE = 16_000
+const MAX_UPLOAD_BYTES = 3.5 * 1024 * 1024
 
 function pickMimeType(): string {
   if (typeof MediaRecorder === 'undefined') return ''
@@ -23,6 +25,16 @@ function normalizeMimeType(raw: string): string {
   return base
 }
 
+function downsample(samples: Float32Array, fromRate: number, toRate: number): Float32Array {
+  if (toRate >= fromRate) return samples
+  const ratio = fromRate / toRate
+  const length = Math.max(1, Math.floor(samples.length / ratio))
+  const output = new Float32Array(length)
+  for (let index = 0; index < length; index += 1) {
+    output[index] = samples[Math.min(samples.length - 1, Math.floor(index * ratio))] ?? 0
+  }
+  return output
+}
 function mergeFloat32(chunks: Float32Array[]): Float32Array {
   const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
   const merged = new Float32Array(total)
@@ -136,7 +148,8 @@ export function useVoiceRecorder() {
       setElapsedSec(0)
 
       if (samples.length < 4000) return null
-      return encodeWav(samples, sampleRate)
+      const compact = downsample(samples, sampleRate, WHISPER_SAMPLE_RATE)
+      return encodeWav(compact, WHISPER_SAMPLE_RATE)
     }
 
     const recorder = recorderRef.current
@@ -186,6 +199,11 @@ export function useVoiceRecorder() {
     const blob = await collectBlob()
     if (!blob || blob.size < 800) {
       setError('Recording too short — try again.')
+      return null
+    }
+
+    if (blob.size > MAX_UPLOAD_BYTES) {
+      setError('Recording too long — keep it under 45 seconds.')
       return null
     }
 

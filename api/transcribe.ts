@@ -1,4 +1,3 @@
-import { File } from 'node:buffer'
 import { isAuthorized } from './_shared/auth'
 
 interface VercelRequest {
@@ -59,6 +58,11 @@ function extensionForMime(mime: string): string {
   }
 }
 
+function decodeBase64Audio(input: string): Buffer {
+  const normalized = input.includes(',') ? (input.split(',').pop() ?? input) : input
+  return Buffer.from(normalized, 'base64')
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
@@ -78,19 +82,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const mimeType = normalizeMimeType(body.mimeType)
     const extension = extensionForMime(mimeType)
-    const buffer = Buffer.from(body.audio, 'base64')
+    const buffer = decodeBase64Audio(body.audio)
 
     if (buffer.byteLength < 800) {
       return res.status(400).json({ error: 'Recording too short — try again.' })
     }
 
-    if (buffer.byteLength > 8 * 1024 * 1024) {
-      return res.status(413).json({ error: 'Recording too long — keep it under a minute.' })
+    if (buffer.byteLength > 4 * 1024 * 1024) {
+      return res.status(413).json({ error: 'Recording too long — keep it under 45 seconds.' })
     }
 
+    const bytes = Uint8Array.from(buffer)
     const form = new FormData()
-    const file = new File([buffer], `voice.${extension}`, { type: mimeType })
-    form.append('file', file)
+    form.append('file', new Blob([bytes], { type: mimeType }), `voice.${extension}`)
     form.append('model', 'whisper-1')
     form.append('response_format', 'json')
 
@@ -109,8 +113,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (!whisper.ok) {
+      const detail = payload.error?.message ?? raw.trim().slice(0, 220)
       return res.status(whisper.status).json({
-        error: payload.error?.message ?? (raw.slice(0, 180) || 'Transcription failed'),
+        error: detail || 'Whisper could not transcribe this recording.',
       })
     }
 
