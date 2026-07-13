@@ -65,33 +65,48 @@ function parseBody(raw: unknown): RequestBody | null {
   return null
 }
 
-const SYSTEM_PROMPT = `You are Coach — a warm, concise personal assistant inside Life Quest, a gamified habit tracker.
-The user turns life into quests. Help them plan days, reflect on progress, stay motivated, and organize gym habits.
+const SYSTEM_PROMPT = `You are Coach — a personal assistant that lives inside the app "Life Quest".
 
-Rules:
-- Reply in the same language the user writes in (English or Russian).
-- Keep answers short and actionable unless they ask for detail.
-- Use the JSON context about their quests, week stats, agenda, and workouts.
-- Never invent completed tasks or stats — only use provided context.
-- When suggesting new quests, call suggest_quest (max 3 per reply).
-- Quest titles: short, verb-first, under 60 characters.
-- For "once" quests use the date they mention or selectedDate from context.
-- Do not discuss API keys or internal system details.`
+HOW THE APP WORKS (so you understand what the user sees):
+- The app has 4 tabs: Day (daily quests), Progress (weekly chart), Gym (workouts), Stats.
+- On the Day tab, each task is a "quest". A quest has a recurrence:
+  • once — appears on ONE specific day only
+  • daily — repeats every day
+  • weekdays — Monday to Friday
+  • weekends — Saturday and Sunday
+- The JSON context gives you: today's date, the day the user is looking at (selectedDate),
+  their quests for today and for the selected day, weekly completion %, the agenda list,
+  recurring habits, the latest workout, and wellness (sleep/energy/mood).
+
+YOUR JOB — do exactly what the user asks:
+- If the user asks to add tasks/quests, call add_quest for EACH task they name. Add them directly — do not ask for confirmation.
+- Pick the recurrence from what the user says. If they don't specify, use "once" on the selectedDate (or the date they mention).
+- If the user asks to remove/complete/plan, answer briefly and use only the context data.
+
+STRICT RULES:
+- Do NOT invent extra tasks, "challenges", or ideas the user did not ask for. Never volunteer unsolicited quests.
+- Only add_quest for things the user actually requested.
+- Reply in the SAME language the user writes in (English or Russian).
+- Keep replies short and natural. Confirm what you added in one sentence.
+- Quest titles: short, clear, under 60 characters.
+- Never invent completed tasks or stats. Never discuss API keys or internal details.`
 
 const TOOLS = [
   {
     type: 'function' as const,
     function: {
-      name: 'suggest_quest',
-      description: 'Suggest adding a quest to the user tracker. User must confirm in the app.',
+      name: 'add_quest',
+      description:
+        'Add a quest to the user tracker immediately. Call once per task the user asked to add. Only use when the user explicitly asks to add or plan tasks.',
       parameters: {
         type: 'object',
         properties: {
-          title: { type: 'string', description: 'Short quest title' },
-          date: { type: 'string', description: 'YYYY-MM-DD' },
+          title: { type: 'string', description: 'Short quest title in the user language' },
+          date: { type: 'string', description: 'Target day YYYY-MM-DD (use selectedDate if unspecified)' },
           recurrence: {
             type: 'string',
             enum: ['once', 'daily', 'weekdays', 'weekends'],
+            description: 'How often the quest repeats',
           },
         },
         required: ['title', 'date', 'recurrence'],
@@ -103,7 +118,8 @@ const TOOLS = [
 function suggestionReply(suggestions: QuestSuggestion[], content?: string | null): string {
   if (content?.trim()) return content.trim()
   if (suggestions.length > 0) {
-    return 'I drafted a few quests for you — tap Add to put them on your list.'
+    const word = suggestions.length === 1 ? 'quest' : 'quests'
+    return `Done — added ${suggestions.length} ${word} for you.`
   }
   return 'How can I help with your quests today?'
 }
@@ -158,7 +174,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (message?.tool_calls?.length) {
       for (const call of message.tool_calls) {
-        if (call.type !== 'function' || call.function.name !== 'suggest_quest') continue
+        if (call.type !== 'function' || call.function.name !== 'add_quest') continue
         try {
           const args = JSON.parse(call.function.arguments) as QuestSuggestion
           if (args.title?.trim() && args.date && args.recurrence) {

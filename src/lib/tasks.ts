@@ -1,5 +1,5 @@
-import { getDay, parseISO } from 'date-fns'
-import type { DayLog, DisplayTask, Habit, Recurrence } from '../types'
+import { getDay, parseISO, format, subDays } from 'date-fns'
+import type { AppData, DayLog, DisplayTask, Habit, Recurrence } from '../types'
 
 export function taskAppliesToDay(habit: Habit, date: string): boolean {
   const d = parseISO(date)
@@ -20,8 +20,9 @@ export function taskAppliesToDay(habit: Habit, date: string): boolean {
 }
 
 export function tasksForDay(date: string, habits: Habit[], log: DayLog): DisplayTask[] {
+  const skipped = new Set(log.skippedHabitIds ?? [])
   const recurring: DisplayTask[] = habits
-    .filter((h) => taskAppliesToDay(h, date))
+    .filter((h) => taskAppliesToDay(h, date) && !skipped.has(h.id))
     .sort((a, b) => a.order - b.order)
     .map((h) => ({
       id: h.id,
@@ -41,6 +42,37 @@ export function tasksForDay(date: string, habits: Habit[], log: DayLog): Display
   const done = all.filter((task) => task.done)
   const pending = all.filter((task) => !task.done)
   return [...done, ...pending]
+}
+
+/**
+ * Consecutive completed days for a recurring habit, counting back from refDate.
+ * The reference day (usually today) does not break the streak if it is simply
+ * not done yet. Non-repeating ("once") habits have no streak.
+ */
+export function habitStreak(data: AppData, habit: Habit, refDate: string): number {
+  if ((habit.recurrence ?? 'daily') === 'once') return 0
+
+  let streak = 0
+  let cursor = parseISO(refDate)
+
+  for (let i = 0; i < 366; i += 1) {
+    const key = format(cursor, 'yyyy-MM-dd')
+    const log = data.dayLogs[key]
+    const skipped = log?.skippedHabitIds?.includes(habit.id) ?? false
+
+    if (taskAppliesToDay(habit, key) && !skipped) {
+      const done = !!log?.completions[habit.id]
+      if (done) {
+        streak += 1
+      } else if (key !== refDate) {
+        break
+      }
+    }
+
+    cursor = subDays(cursor, 1)
+  }
+
+  return streak
 }
 
 export function dayTaskCounts(tasks: DisplayTask[]) {

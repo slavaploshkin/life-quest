@@ -25,7 +25,11 @@ function migrateHabit(h: Habit): Habit {
 }
 
 function migrateDayLog(log: DayLog): DayLog {
-  return { ...log, extraTasks: log.extraTasks ?? [] }
+  return {
+    ...log,
+    extraTasks: log.extraTasks ?? [],
+    skippedHabitIds: log.skippedHabitIds ?? [],
+  }
 }
 
 export function normalizeAppData(raw: AppData | null | undefined): AppData {
@@ -59,6 +63,7 @@ export function emptyDayLog(date: string): DayLog {
     date,
     completions: {},
     extraTasks: [],
+    skippedHabitIds: [],
     lesson: '',
     sleepHours: null,
     energy: null,

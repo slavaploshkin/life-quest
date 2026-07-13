@@ -97,7 +97,7 @@ function App({ account, onLogout }: AppProps) {
         onLogout={onLogout}
       />
 
-      <CoachFab hidden={coachOpen || tab === 'day'} onClick={() => setCoachOpen(true)} />
+      <CoachFab hidden={coachOpen} raised={tab === 'day'} onClick={() => setCoachOpen(true)} />
 
       <AssistantDrawer
         open={coachOpen}

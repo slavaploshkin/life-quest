@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { AppActions } from '../hooks/useAppData'
 import type { DayLog, Habit, Mood, Recurrence } from '../types'
-import { tasksForDay, dayTaskCounts, RECURRENCE_LABELS } from '../lib/tasks'
+import { tasksForDay, dayTaskCounts, habitStreak, RECURRENCE_LABELS } from '../lib/tasks'
 import { formatDateLabel, formatDayNameEn, isToday } from '../lib/stats'
 import { TaskRow } from './TaskRow'
 import styles from './DayColumn.module.css'
@@ -38,6 +38,7 @@ export function DayColumn({
 
   const tasks = tasksForDay(date, habits, log)
   const counts = dayTaskCounts(tasks)
+  const habitById = new Map(habits.map((h) => [h.id, h]))
   const today = isToday(date)
   const hasProgress = counts.done > 0
 
@@ -99,9 +100,20 @@ export function DayColumn({
           <p className={styles.empty}>No quests yet — write one below</p>
         ) : (
           <ul className={styles.tasks}>
-            {tasks.map((task) => (
-              <TaskRow key={`${task.kind}-${task.id}`} task={task} date={date} actions={actions} />
-            ))}
+            {tasks.map((task) => {
+              const habit = task.kind === 'habit' ? habitById.get(task.id) : undefined
+              const streak = habit ? habitStreak(actions.data, habit, date) : 0
+              return (
+                <TaskRow
+                  key={`${task.kind}-${task.id}`}
+                  task={task}
+                  date={date}
+                  actions={actions}
+                  recurrence={habit?.recurrence}
+                  streak={streak}
+                />
+              )
+            })}
           </ul>
         )}
       </div>

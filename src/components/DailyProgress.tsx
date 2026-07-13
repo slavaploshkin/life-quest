@@ -1,5 +1,5 @@
 import { formatDayNameEn, formatDateLabel, isToday } from '../lib/stats'
-import { dayTaskCounts, dayTaskPct, tasksForDay } from '../lib/tasks'
+import { dayTaskCounts, dayTaskPct, habitStreak, tasksForDay, taskAppliesToDay } from '../lib/tasks'
 import type { AppData, DayLog, Habit } from '../types'
 import { ProgressRing } from './ProgressRing'
 import styles from './DailyProgress.module.css'
@@ -28,6 +28,19 @@ export function DailyProgress({ date, data, habits }: DailyProgressProps) {
   const pct = dayTaskPct(tasks)
   const today = isToday(date)
 
+  const skipped = new Set(log.skippedHabitIds ?? [])
+  const bestStreak = habits
+    .filter((h) => taskAppliesToDay(h, date) && !skipped.has(h.id))
+    .reduce((max, h) => Math.max(max, habitStreak(data, h, date)), 0)
+
+  const hint = (() => {
+    if (counts.total === 0) return 'No quests yet — add one below.'
+    if (counts.remaining === 0) return today ? 'All done — great day! 🎉' : 'All done ✓'
+    const left = `${counts.remaining} left`
+    if (bestStreak >= 2) return `🔥 ${bestStreak}-day streak · ${left}`
+    return today ? `${left} today` : left
+  })()
+
   return (
     <section className={styles.section}>
       <div className={styles.layout}>
@@ -42,6 +55,7 @@ export function DailyProgress({ date, data, habits }: DailyProgressProps) {
             <span className={styles.countSep}>·</span>
             <span className={styles.countLeft}>{counts.remaining} left</span>
           </div>
+          <p className={styles.hint}>{hint}</p>
         </div>
         <div className={styles.ringCol}>
           <ProgressRing pct={pct} size={76} stroke={6} glow label={`${pct}%`} />

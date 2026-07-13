@@ -216,6 +216,14 @@
   opacity: 0.55;
 }
 
+.addedTag {
+  flex-shrink: 0;
+  color: #b7f5d0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .dismissBtn {
   align-self: flex-start;
   background: none;

@@ -232,13 +232,20 @@ export function useAppData(userId: string, storageId?: string) {
 
   const removeTask = useCallback((taskId: string, kind: 'habit' | 'extra', date: string) => {
     update((prev) => {
+      const existing = ensureDayLog(date, prev)
+
       if (kind === 'habit') {
+        const skippedHabitIds = existing.skippedHabitIds ?? []
+        if (skippedHabitIds.includes(taskId)) return prev
         return {
           ...prev,
-          habits: prev.habits.filter((h) => h.id !== taskId),
+          dayLogs: {
+            ...prev.dayLogs,
+            [date]: { ...existing, skippedHabitIds: [...skippedHabitIds, taskId] },
+          },
         }
       }
-      const existing = ensureDayLog(date, prev)
+
       return {
         ...prev,
         dayLogs: {
@@ -248,6 +255,62 @@ export function useAppData(userId: string, storageId?: string) {
       }
     })
   }, [update, ensureDayLog])
+
+  const removeHabitEverywhere = useCallback((habitId: string) => {
+    update((prev) => ({
+      ...prev,
+      habits: prev.habits.filter((h) => h.id !== habitId),
+    }))
+  }, [update])
+
+  const setHabitRecurrence = useCallback(
+    (habitId: string, recurrence: Recurrence, date: string) => {
+      update((prev) => ({
+        ...prev,
+        habits: prev.habits.map((h) => {
+          if (h.id !== habitId) return h
+          if (recurrence === 'once') {
+            return { ...h, recurrence, onceDate: h.onceDate ?? date }
+          }
+          const { onceDate: _onceDate, ...rest } = h
+          return { ...rest, recurrence }
+        }),
+      }))
+    },
+    [update],
+  )
+
+  const moveTask = useCallback(
+    (taskId: string, kind: 'habit' | 'extra', fromDate: string, toDate: string) => {
+      if (fromDate === toDate) return
+
+      update((prev) => {
+        if (kind === 'habit') {
+          return {
+            ...prev,
+            habits: prev.habits.map((h) =>
+              h.id === taskId && h.recurrence === 'once' ? { ...h, onceDate: toDate } : h,
+            ),
+          }
+        }
+
+        const from = ensureDayLog(fromDate, prev)
+        const moved = from.extraTasks.find((t) => t.id === taskId)
+        if (!moved) return prev
+
+        const to = ensureDayLog(toDate, prev)
+        return {
+          ...prev,
+          dayLogs: {
+            ...prev.dayLogs,
+            [fromDate]: { ...from, extraTasks: from.extraTasks.filter((t) => t.id !== taskId) },
+            [toDate]: { ...to, extraTasks: [...to.extraTasks, moved] },
+          },
+        }
+      })
+    },
+    [update, ensureDayLog],
+  )
 
   const updateTaskTitle = useCallback(
     (taskId: string, kind: 'habit' | 'extra', date: string, title: string) => {
@@ -390,6 +453,9 @@ export function useAppData(userId: string, storageId?: string) {
     updateDayField,
     addTask,
     removeTask,
+    removeHabitEverywhere,
+    setHabitRecurrence,
+    moveTask,
     updateTaskTitle,
     resetDayPlan,
     createWorkout,

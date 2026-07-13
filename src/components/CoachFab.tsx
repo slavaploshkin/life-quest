@@ -12,6 +12,8 @@ interface FabPosition {
 interface CoachFabProps {
   onClick: () => void
   hidden?: boolean
+  /** Raise above the bottom quest input bar (Day tab) */
+  raised?: boolean
 }
 
 function loadPosition(): FabPosition | null {
@@ -45,7 +47,7 @@ function clampPosition(
   }
 }
 
-export function CoachFab({ onClick, hidden = false }: CoachFabProps) {
+export function CoachFab({ onClick, hidden = false, raised = false }: CoachFabProps) {
   const fabRef = useRef<HTMLButtonElement>(null)
   const [position, setPosition] = useState<FabPosition | null>(() => loadPosition())
   const dragRef = useRef({
@@ -144,11 +146,13 @@ export function CoachFab({ onClick, hidden = false }: CoachFabProps) {
     ? { left: `${position.left}px`, bottom: `${position.bottom}px`, right: 'auto' as const }
     : undefined
 
+  const raisedClass = raised && !position ? styles.raised : ''
+
   return (
     <button
       ref={fabRef}
       type="button"
-      className={styles.fab}
+      className={`${styles.fab} ${raisedClass}`}
       style={style}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}

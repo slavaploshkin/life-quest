@@ -32,11 +32,10 @@ export function AssistantDrawer({
 }: AssistantDrawerProps) {
   const { data, agendaItems, addTask } = actions
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [pendingSuggestions, setPendingSuggestions] = useState<QuestSuggestion[]>([])
+  const [addedQuests, setAddedQuests] = useState<QuestSuggestion[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set())
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -55,7 +54,7 @@ export function AssistantDrawer({
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
-  }, [messages, pendingSuggestions, loading, open, voice.transcribing])
+  }, [messages, addedQuests, loading, open, voice.transcribing])
 
   useEffect(() => {
     if (!open) return
@@ -80,12 +79,15 @@ export function AssistantDrawer({
       setError(null)
       voice.clearError()
       setLoading(true)
-      setPendingSuggestions([])
+      setAddedQuests([])
 
       try {
         const result = await sendAssistantMessage(nextMessages, context)
         setMessages((prev) => [...prev, { role: 'assistant', content: result.reply }])
-        setPendingSuggestions(result.suggestions)
+        for (const quest of result.suggestions) {
+          addTask(quest.title, quest.recurrence, quest.date)
+        }
+        setAddedQuests(result.suggestions)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Coach unavailable')
       } finally {
@@ -93,7 +95,7 @@ export function AssistantDrawer({
         inputRef.current?.focus()
       }
     },
-    [context, loading, messages, voice],
+    [addTask, context, loading, messages, voice],
   )
 
   const startVoice = async () => {
@@ -106,11 +108,6 @@ export function AssistantDrawer({
   const confirmVoice = async () => {
     const text = await voice.confirmRecording()
     if (text) void send(text)
-  }
-
-  const applySuggestion = (suggestion: QuestSuggestion) => {
-    addTask(suggestion.title, suggestion.recurrence, suggestion.date)
-    setAppliedIds((prev) => new Set(prev).add(suggestionKey(suggestion)))
   }
 
   if (!open) return null
@@ -163,35 +160,24 @@ export function AssistantDrawer({
             </div>
           ))}
 
-          {pendingSuggestions.length > 0 && (
+          {addedQuests.length > 0 && (
             <div className={styles.suggestions}>
-              <p className={styles.suggestionsTitle}>Suggested quests</p>
-              {pendingSuggestions.map((suggestion) => {
-                const key = suggestionKey(suggestion)
-                const applied = appliedIds.has(key)
-                return (
-                  <div key={key} className={styles.suggestionCard}>
-                    <div>
-                      <strong>{suggestion.title}</strong>
-                      <span>
-                        {formatDateLabel(suggestion.date)} · {RECURRENCE_LABELS[suggestion.recurrence]}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      className={styles.addBtn}
-                      disabled={applied}
-                      onClick={() => applySuggestion(suggestion)}
-                    >
-                      {applied ? 'Added' : 'Add'}
-                    </button>
+              <p className={styles.suggestionsTitle}>Added to your list</p>
+              {addedQuests.map((quest) => (
+                <div key={suggestionKey(quest)} className={styles.suggestionCard}>
+                  <div>
+                    <strong>{quest.title}</strong>
+                    <span>
+                      {formatDateLabel(quest.date)} · {RECURRENCE_LABELS[quest.recurrence]}
+                    </span>
                   </div>
-                )
-              })}
+                  <span className={styles.addedTag}>✓ Added</span>
+                </div>
+              ))}
               <button
                 type="button"
                 className={styles.dismissBtn}
-                onClick={() => setPendingSuggestions([])}
+                onClick={() => setAddedQuests([])}
               >
                 Dismiss
               </button>

@@ -23,6 +23,8 @@ export interface DayLog {
   date: string
   completions: Record<string, boolean>
   extraTasks: DayTask[]
+  /** Recurring habit ids hidden for this specific day only */
+  skippedHabitIds?: string[]
   lesson: string
   sleepHours: number | null
   energy: 1 | 2 | 3 | 4 | null
