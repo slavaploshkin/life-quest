@@ -1,4 +1,4 @@
-import { isAuthorized, parseJsonBody } from '../server/apiAuth'
+import OpenAI from 'openai'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -28,6 +28,41 @@ interface RequestBody {
   secret?: string
   messages: ChatMessage[]
   context: Record<string, unknown>
+}
+
+function isAuthorized(body: { username?: string; password?: string; secret?: string }): boolean {
+  const assistantSecret =
+    process.env.ASSISTANT_SECRET?.trim() || process.env.VITE_ASSISTANT_SECRET?.trim()
+  if (body.secret && assistantSecret && body.secret === assistantSecret) return true
+  if (!body.username || !body.password) return false
+
+  const pairs = [
+    [process.env.VITE_ACCOUNT_1_USERNAME, process.env.VITE_ACCOUNT_1_PASSWORD],
+    [process.env.ACCOUNT_1_USERNAME, process.env.ACCOUNT_1_PASSWORD],
+    [process.env.VITE_ACCOUNT_2_USERNAME, process.env.VITE_ACCOUNT_2_PASSWORD],
+    [process.env.ACCOUNT_2_USERNAME, process.env.ACCOUNT_2_PASSWORD],
+  ]
+
+  const cleanUser = body.username.trim().toLowerCase()
+  const cleanPass = body.password.trim()
+
+  return pairs.some(([user, pass]) => {
+    if (!user || !pass) return false
+    return user.trim().toLowerCase() === cleanUser && pass.trim() === cleanPass
+  })
+}
+
+function parseBody(raw: unknown): RequestBody | null {
+  if (!raw) return null
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw) as RequestBody
+    } catch {
+      return null
+    }
+  }
+  if (typeof raw === 'object') return raw as RequestBody
+  return null
 }
 
 const SYSTEM_PROMPT = `You are Coach — a warm, concise personal assistant inside Life Quest, a gamified habit tracker.
@@ -84,7 +119,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(503).json({ error: 'OPENAI_API_KEY is not configured on the server.' })
   }
 
-  const body = parseJsonBody<RequestBody>(req.body)
+  const body = parseBody(req.body)
   if (!body?.messages?.length || !body.context) {
     return res.status(400).json({ error: 'Missing messages or context' })
   }
@@ -102,61 +137,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       content: `User context (JSON):\n${JSON.stringify(body.context)}`,
     },
     ...body.messages.slice(-12).map((m) => ({
-      role: m.role as 'user' | 'assistant',
+      role: m.role,
       content: m.content,
     })),
   ]
 
   try {
-    const first = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        messages: openAiMessages,
-        tools: TOOLS,
-        tool_choice: 'auto',
-        temperature: 0.6,
-        max_tokens: 700,
-      }),
+    const openai = new OpenAI({ apiKey })
+    const completion = await openai.chat.completions.create({
+      model,
+      messages: openAiMessages,
+      tools: TOOLS,
+      tool_choice: 'auto',
+      temperature: 0.6,
+      max_tokens: 700,
     })
 
-    const raw = await first.text()
-    let firstPayload: {
-      error?: { message?: string }
-      choices?: Array<{
-        message?: {
-          content?: string | null
-          tool_calls?: Array<{
-            id: string
-            function: { name: string; arguments: string }
-          }>
-        }
-      }>
-    } = {}
-
-    try {
-      firstPayload = JSON.parse(raw) as typeof firstPayload
-    } catch {
-      firstPayload = {}
-    }
-
-    if (!first.ok) {
-      const detail = firstPayload.error?.message ?? raw.trim().slice(0, 220)
-      return res.status(first.status).json({
-        error: detail || 'OpenAI request failed',
-      })
-    }
-
-    const firstMessage = firstPayload.choices?.[0]?.message
+    const message = completion.choices?.[0]?.message
     const suggestions: QuestSuggestion[] = []
 
-    if (firstMessage?.tool_calls?.length) {
-      for (const call of firstMessage.tool_calls) {
-        if (call.function.name !== 'suggest_quest') continue
+    if (message?.tool_calls?.length) {
+      for (const call of message.tool_calls) {
+        if (call.type !== 'function' || call.function.name !== 'suggest_quest') continue
         try {
           const args = JSON.parse(call.function.arguments) as QuestSuggestion
           if (args.title?.trim() && args.date && args.recurrence) {
@@ -173,11 +175,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     return res.status(200).json({
-      reply: suggestionReply(suggestions, firstMessage?.content),
+      reply: suggestionReply(suggestions, message?.content),
       suggestions,
     })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Coach service error'
+    const message =
+      err instanceof Error
+        ? err.message
+        : typeof err === 'object' && err && 'message' in err
+          ? String((err as { message?: unknown }).message)
+          : 'Coach service error'
     return res.status(500).json({ error: message })
   }
 }

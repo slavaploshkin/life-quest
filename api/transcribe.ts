@@ -1,5 +1,4 @@
 import OpenAI, { toFile } from 'openai'
-import { isAuthorized, parseJsonBody } from '../server/apiAuth'
 
 interface VercelRequest {
   method?: string
@@ -18,6 +17,41 @@ interface RequestBody {
   secret?: string
   audio: string
   mimeType?: string
+}
+
+function isAuthorized(body: { username?: string; password?: string; secret?: string }): boolean {
+  const assistantSecret =
+    process.env.ASSISTANT_SECRET?.trim() || process.env.VITE_ASSISTANT_SECRET?.trim()
+  if (body.secret && assistantSecret && body.secret === assistantSecret) return true
+  if (!body.username || !body.password) return false
+
+  const pairs = [
+    [process.env.VITE_ACCOUNT_1_USERNAME, process.env.VITE_ACCOUNT_1_PASSWORD],
+    [process.env.ACCOUNT_1_USERNAME, process.env.ACCOUNT_1_PASSWORD],
+    [process.env.VITE_ACCOUNT_2_USERNAME, process.env.VITE_ACCOUNT_2_PASSWORD],
+    [process.env.ACCOUNT_2_USERNAME, process.env.ACCOUNT_2_PASSWORD],
+  ]
+
+  const cleanUser = body.username.trim().toLowerCase()
+  const cleanPass = body.password.trim()
+
+  return pairs.some(([user, pass]) => {
+    if (!user || !pass) return false
+    return user.trim().toLowerCase() === cleanUser && pass.trim() === cleanPass
+  })
+}
+
+function parseBody(raw: unknown): RequestBody | null {
+  if (!raw) return null
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw) as RequestBody
+    } catch {
+      return null
+    }
+  }
+  if (typeof raw === 'object') return raw as RequestBody
+  return null
 }
 
 function normalizeMimeType(raw?: string): string {
@@ -62,7 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(503).json({ error: 'OPENAI_API_KEY is not configured on the server.' })
   }
 
-  const body = parseJsonBody<RequestBody>(req.body)
+  const body = parseBody(req.body)
   if (!body?.audio || !isAuthorized(body)) {
     return res.status(body?.audio ? 401 : 400).json({ error: body?.audio ? 'Unauthorized' : 'Missing audio' })
   }
