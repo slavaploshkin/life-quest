@@ -1,4 +1,5 @@
-import { isAuthorized } from './_shared/auth'
+import OpenAI, { toFile } from 'openai'
+import { isAuthorized, parseJsonBody } from '../server/apiAuth'
 
 interface VercelRequest {
   method?: string
@@ -17,19 +18,6 @@ interface RequestBody {
   secret?: string
   audio: string
   mimeType?: string
-}
-
-function parseBody(raw: unknown): RequestBody | null {
-  if (!raw) return null
-  if (typeof raw === 'string') {
-    try {
-      return JSON.parse(raw) as RequestBody
-    } catch {
-      return null
-    }
-  }
-  if (typeof raw === 'object') return raw as RequestBody
-  return null
 }
 
 function normalizeMimeType(raw?: string): string {
@@ -74,7 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(503).json({ error: 'OPENAI_API_KEY is not configured on the server.' })
   }
 
-  const body = parseBody(req.body)
+  const body = parseJsonBody<RequestBody>(req.body)
   if (!body?.audio || !isAuthorized(body)) {
     return res.status(body?.audio ? 401 : 400).json({ error: body?.audio ? 'Unauthorized' : 'Missing audio' })
   }
@@ -92,36 +80,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(413).json({ error: 'Recording too long — keep it under 45 seconds.' })
     }
 
-    const bytes = Uint8Array.from(buffer)
-    const form = new FormData()
-    form.append('file', new Blob([bytes], { type: mimeType }), `voice.${extension}`)
-    form.append('model', 'whisper-1')
-    form.append('response_format', 'json')
-
-    const whisper = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}` },
-      body: form,
+    const openai = new OpenAI({ apiKey })
+    const file = await toFile(buffer, `voice.${extension}`, { type: mimeType })
+    const transcription = await openai.audio.transcriptions.create({
+      file,
+      model: 'whisper-1',
     })
 
-    const raw = await whisper.text()
-    let payload: { text?: string; error?: { message?: string } } = {}
-    try {
-      payload = JSON.parse(raw) as { text?: string; error?: { message?: string } }
-    } catch {
-      payload = {}
-    }
-
-    if (!whisper.ok) {
-      const detail = payload.error?.message ?? raw.trim().slice(0, 220)
-      return res.status(whisper.status).json({
-        error: detail || 'Whisper could not transcribe this recording.',
-      })
-    }
-
-    return res.status(200).json({ text: payload.text?.trim() ?? '' })
+    return res.status(200).json({ text: transcription.text?.trim() ?? '' })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Transcription service error'
+    const message =
+      err instanceof Error
+        ? err.message
+        : typeof err === 'object' && err && 'message' in err
+          ? String((err as { message?: unknown }).message)
+          : 'Transcription service error'
     return res.status(500).json({ error: message })
   }
 }

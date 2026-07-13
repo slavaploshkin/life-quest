@@ -25,3 +25,16 @@ export function isAuthorized(body: AuthBody): boolean {
     return user.trim().toLowerCase() === cleanUser && pass.trim() === cleanPass
   })
 }
+
+export function parseJsonBody<T>(raw: unknown): T | null {
+  if (!raw) return null
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw) as T
+    } catch {
+      return null
+    }
+  }
+  if (typeof raw === 'object') return raw as T
+  return null
+}

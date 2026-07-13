@@ -176,6 +176,10 @@ export async function signIn(username: string, password: string): Promise<Active
   return toActiveAccount(account, session.user.id)
 }
 
+function rememberCredentialsForAccount(account: LocalAccount): void {
+  rememberApiCredentials(account.username, account.password)
+}
+
 export async function restoreSession(): Promise<ActiveAccount | null> {
   const storageId = localStorage.getItem(ACTIVE_ACCOUNT_KEY)
   const localAccount = storageId
@@ -183,19 +187,36 @@ export async function restoreSession(): Promise<ActiveAccount | null> {
     : null
 
   if (!supabaseConfigured || !supabase) {
-    return localAccount ? toActiveAccount(localAccount, localAccount.storageId) : null
+    if (localAccount) {
+      rememberCredentialsForAccount(localAccount)
+      return toActiveAccount(localAccount, localAccount.storageId)
+    }
+    return null
   }
 
   const { data, error } = await supabase.auth.getSession()
-  if (error || !data.session) return null
+  if (error || !data.session) {
+    if (localAccount) {
+      rememberCredentialsForAccount(localAccount)
+      return toActiveAccount(localAccount, localAccount.storageId)
+    }
+    return null
+  }
 
   const fromSession = accountFromSession(data.session)
   if (fromSession) {
     rememberAccount(fromSession.storageId)
+    const account = configuredAccounts.find((item) => item.storageId === fromSession.storageId)
+    if (account) rememberCredentialsForAccount(account)
     return fromSession
   }
 
-  return localAccount ? toActiveAccount(localAccount, localAccount.storageId) : null
+  if (localAccount) {
+    rememberCredentialsForAccount(localAccount)
+    return toActiveAccount(localAccount, localAccount.storageId)
+  }
+
+  return null
 }
 
 export async function signOut(): Promise<void> {

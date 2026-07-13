@@ -1,4 +1,4 @@
-import { isAuthorized } from './_shared/auth'
+import { isAuthorized, parseJsonBody } from '../server/apiAuth'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -65,6 +65,14 @@ const TOOLS = [
   },
 ]
 
+function suggestionReply(suggestions: QuestSuggestion[], content?: string | null): string {
+  if (content?.trim()) return content.trim()
+  if (suggestions.length > 0) {
+    return 'I drafted a few quests for you — tap Add to put them on your list.'
+  }
+  return 'How can I help with your quests today?'
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
@@ -76,13 +84,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(503).json({ error: 'OPENAI_API_KEY is not configured on the server.' })
   }
 
-  const body = req.body as RequestBody
+  const body = parseJsonBody<RequestBody>(req.body)
   if (!body?.messages?.length || !body.context) {
     return res.status(400).json({ error: 'Missing messages or context' })
   }
 
   if (!isAuthorized(body)) {
-    return res.status(401).json({ error: 'Unauthorized' })
+    return res.status(401).json({ error: 'Unauthorized — log out and sign in again.' })
   }
 
   const model = process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini'
@@ -116,7 +124,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }),
     })
 
-    const firstPayload = (await first.json()) as {
+    const raw = await first.text()
+    let firstPayload: {
       error?: { message?: string }
       choices?: Array<{
         message?: {
@@ -127,11 +136,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }>
         }
       }>
+    } = {}
+
+    try {
+      firstPayload = JSON.parse(raw) as typeof firstPayload
+    } catch {
+      firstPayload = {}
     }
 
     if (!first.ok) {
+      const detail = firstPayload.error?.message ?? raw.trim().slice(0, 220)
       return res.status(first.status).json({
-        error: firstPayload.error?.message ?? 'OpenAI request failed',
+        error: detail || 'OpenAI request failed',
       })
     }
 
@@ -154,51 +170,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           /* skip malformed tool args */
         }
       }
-
-      const followUp = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            ...openAiMessages,
-            firstMessage,
-            ...firstMessage.tool_calls.map((call) => ({
-              role: 'tool' as const,
-              tool_call_id: call.id,
-              content: JSON.stringify({ ok: true, pending_user_confirmation: true }),
-            })),
-          ],
-          temperature: 0.6,
-          max_tokens: 500,
-        }),
-      })
-
-      const followPayload = (await followUp.json()) as {
-        error?: { message?: string }
-        choices?: Array<{ message?: { content?: string | null } }>
-      }
-
-      if (!followUp.ok) {
-        return res.status(followUp.status).json({
-          error: followPayload.error?.message ?? 'OpenAI follow-up failed',
-        })
-      }
-
-      return res.status(200).json({
-        reply: followPayload.choices?.[0]?.message?.content?.trim() ?? 'Here are some quest ideas for you.',
-        suggestions,
-      })
     }
 
     return res.status(200).json({
-      reply: firstMessage?.content?.trim() ?? 'How can I help with your quests today?',
+      reply: suggestionReply(suggestions, firstMessage?.content),
       suggestions,
     })
-  } catch {
-    return res.status(500).json({ error: 'Coach service error' })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Coach service error'
+    return res.status(500).json({ error: message })
   }
 }

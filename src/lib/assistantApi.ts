@@ -42,14 +42,24 @@ export async function sendAssistantMessage(
     body: JSON.stringify({ ...auth, messages, context }),
   })
 
-  const payload = (await response.json().catch(() => ({}))) as {
-    error?: string
-    reply?: string
-    suggestions?: QuestSuggestion[]
+  const raw = await response.text()
+  let payload: { error?: string; reply?: string; suggestions?: QuestSuggestion[] } = {}
+  try {
+    payload = JSON.parse(raw) as typeof payload
+  } catch {
+    payload = {}
   }
 
   if (!response.ok) {
-    throw new AssistantApiError(payload.error ?? 'Coach is unavailable right now.', response.status)
+    const fallback =
+      response.status === 404
+        ? 'Coach API is unavailable — wait for deploy to finish.'
+        : response.status === 401
+          ? 'Log out and sign in again to use Coach.'
+          : response.status === 503
+            ? 'OPENAI_API_KEY is not configured on the server.'
+            : raw.trim().slice(0, 220) || `Coach is unavailable (${response.status})`
+    throw new AssistantApiError(payload.error ?? fallback, response.status)
   }
 
   return {
