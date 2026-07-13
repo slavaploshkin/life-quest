@@ -16,6 +16,7 @@ interface InfiniteDayScrollProps {
 const WINDOW_SIZE = 15
 const CENTER_INDEX = 7
 const SETTLE_MS = 320
+const AUTO_ALIGN_SETTLE_MS = 680
 
 function anchorForDate(date: string): string {
   return format(addDays(parseISO(date), -CENTER_INDEX), 'yyyy-MM-dd')
@@ -45,12 +46,13 @@ export function InfiniteDayScroll({
   const rafId = useRef<number | null>(null)
   const lastInternalCommit = useRef<string | null>(null)
   const allowCommitRef = useRef(false)
+  const aligningRef = useRef(false)
 
   const [windowAnchor, setWindowAnchor] = useState(() => anchorForDate(selectedDate))
   const [dragging, setDragging] = useState(false)
+  const [aligning, setAligning] = useState(false)
   const [pendingDate, setPendingDate] = useState<string | null>(null)
   const [focusedDate, setFocusedDate] = useState(selectedDate)
-  const [proximities, setProximities] = useState<number[]>(() => Array(WINDOW_SIZE).fill(0))
 
   const dates = useMemo(() => {
     const anchor = parseISO(windowAnchor)
@@ -71,16 +73,6 @@ export function InfiniteDayScroll({
     cardRefs.current[index]?.scrollIntoView({ behavior, block: 'nearest', inline: 'center' })
   }, [])
 
-  const centerTrackOnIndex = useCallback(
-    (index: number) => {
-      const track = trackRef.current
-      const card = cardRefs.current[index]
-      if (!track || !card) return
-      track.scrollLeft = card.offsetLeft - (track.clientWidth - card.clientWidth) / 2
-    },
-    [],
-  )
-
   const updateProximities = useCallback(() => {
     const track = trackRef.current
     if (!track) return
@@ -94,24 +86,18 @@ export function InfiniteDayScroll({
 
     let bestIndex = CENTER_INDEX
     let bestProximity = -1
-    const nextProximities: number[] = []
 
     cardRefs.current.forEach((card, index) => {
-      if (!card) {
-        nextProximities[index] = 0
-        return
-      }
+      if (!card) return
       const rect = card.getBoundingClientRect()
       const cardCenter = rect.left + rect.width / 2
       const proximity = cardProximity(cardCenter, viewportCenter, cardWidth, gap)
-      nextProximities[index] = proximity
       if (proximity > bestProximity) {
         bestProximity = proximity
         bestIndex = index
       }
     })
 
-    setProximities(nextProximities)
     if (allowCommitRef.current) {
       setFocusedDate(dates[bestIndex] ?? selectedDate)
     }
@@ -156,27 +142,35 @@ export function InfiniteDayScroll({
         return
       }
 
-      pauseCommits(behavior === 'smooth' ? 460 : SETTLE_MS)
+      const settleMs = behavior === 'smooth' ? 460 : AUTO_ALIGN_SETTLE_MS
+      pauseCommits(settleMs)
       programmaticScroll.current = true
-      if (behavior === 'auto') {
-        centerTrackOnIndex(indexInWindow)
-        updateProximities()
-      } else {
-        scrollCardToCenter(indexInWindow, behavior)
-      }
-
+      aligningRef.current = true
+      setAligning(true)
       setFocusedDate(selectedDate)
       setPendingDate(null)
+
+      const runScroll = () => scrollCardToCenter(indexInWindow, behavior)
+      if (behavior === 'auto') {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(runScroll)
+        })
+      } else {
+        runScroll()
+      }
 
       if (programmaticScrollTimer.current != null) {
         window.clearTimeout(programmaticScrollTimer.current)
       }
       programmaticScrollTimer.current = window.setTimeout(() => {
         programmaticScroll.current = false
+        aligningRef.current = false
+        setAligning(false)
+        setFocusedDate(selectedDate)
         updateProximities()
-      }, behavior === 'smooth' ? 460 : SETTLE_MS)
+      }, settleMs)
     },
-    [centerTrackOnIndex, dates, pauseCommits, scrollCardToCenter, selectedDate, updateProximities],
+    [dates, pauseCommits, scrollCardToCenter, selectedDate, updateProximities],
   )
 
   useLayoutEffect(() => {
@@ -202,7 +196,7 @@ export function InfiniteDayScroll({
   }, [])
 
   const commitNearestDate = useCallback(() => {
-    if (!allowCommitRef.current || programmaticScroll.current) return
+    if (!allowCommitRef.current || programmaticScroll.current || aligningRef.current) return
 
     const nearestDate = nearestDateToCenter()
     setPendingDate(null)
@@ -215,7 +209,7 @@ export function InfiniteDayScroll({
   }, [nearestDateToCenter, onSelectedDateChange, selectedDate, updateProximities])
 
   const scheduleCommit = useCallback(() => {
-    if (programmaticScroll.current || !allowCommitRef.current) return
+    if (programmaticScroll.current || aligningRef.current || !allowCommitRef.current) return
     scheduleProximityUpdate()
     if (scrollEndTimer.current != null) {
       window.clearTimeout(scrollEndTimer.current)
@@ -244,12 +238,16 @@ export function InfiniteDayScroll({
       }
 
       programmaticScroll.current = true
+      aligningRef.current = true
+      setAligning(true)
       pauseCommits(420)
       setPendingDate(date)
       scrollCardToCenter(index, 'smooth')
 
       clickSelectTimer.current = window.setTimeout(() => {
         programmaticScroll.current = false
+        aligningRef.current = false
+        setAligning(false)
         setPendingDate(null)
         lastInternalCommit.current = date
         onSelectedDateChange(date)
@@ -259,6 +257,8 @@ export function InfiniteDayScroll({
 
       programmaticScrollTimer.current = window.setTimeout(() => {
         programmaticScroll.current = false
+        aligningRef.current = false
+        setAligning(false)
       }, 440)
     },
     [focusedDate, onSelectedDateChange, pauseCommits, pendingDate, scrollCardToCenter, updateProximities],
@@ -270,7 +270,7 @@ export function InfiniteDayScroll({
     <div className={styles.wrap}>
       <div
         ref={trackRef}
-        className={`${styles.track} ${dragging ? styles.dragging : ''}`}
+        className={`${styles.track} ${dragging ? styles.dragging : ''} ${aligning ? styles.aligning : ''}`}
         onScroll={scheduleCommit}
         onPointerDown={() => {
           allowCommitRef.current = true
@@ -291,10 +291,10 @@ export function InfiniteDayScroll({
         tabIndex={0}
       >
         {dates.map((date, index) => {
-          const proximity = proximities[index] ?? 0
-          const opacity = 0.52 + proximity * 0.48
-          const scale = 0.94 + proximity * 0.06
           const isHighlighted = date === highlightDate
+          const highlightIndex = dates.indexOf(highlightDate)
+          const distance =
+            highlightIndex >= 0 ? Math.abs(index - highlightIndex) : Math.abs(index - CENTER_INDEX)
 
           return (
             <div
@@ -302,11 +302,7 @@ export function InfiniteDayScroll({
               ref={(node) => {
                 cardRefs.current[index] = node
               }}
-              className={`${styles.cardWrap} ${isHighlighted ? styles.centerCard : ''} ${dragging ? styles.cardDragging : ''}`}
-              style={{
-                opacity,
-                transform: `scale(${scale})`,
-              }}
+              className={`${styles.cardWrap} ${isHighlighted ? styles.centerCard : ''} ${distance === 1 ? styles.neighborCard : ''} ${distance > 1 ? styles.farCard : ''} ${dragging ? styles.cardDragging : ''}`}
               onClickCapture={(event) => selectCard(event, date, index)}
             >
               <DayColumn
@@ -315,6 +311,7 @@ export function InfiniteDayScroll({
                 habits={habits}
                 actions={actions}
                 active={date === highlightDate}
+                carousel
                 showAddQuest={false}
                 onAgendaQuestDropped={onAgendaQuestDropped}
               />

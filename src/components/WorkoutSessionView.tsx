@@ -1,7 +1,7 @@
 import { format } from 'date-fns'
 import type { AppActions } from '../hooks/useAppData'
 import type { WorkoutExercise, WorkoutSession } from '../types'
-import { formatDateRu } from '../lib/stats'
+import { formatDateLabel } from '../lib/stats'
 import styles from './WorkoutSessionView.module.css'
 
 interface WorkoutSessionViewProps {
@@ -26,14 +26,14 @@ export function WorkoutSessionView({ session, actions }: WorkoutSessionViewProps
     <section className={styles.section}>
       <header className={styles.header}>
         <div>
-          <h2 className={styles.title}>Тренировка №{session.number}</h2>
-          <span className={styles.date}>{formatDateRu(session.date)}</span>
+          <h2 className={styles.title}>Workout #{session.number}</h2>
+          <span className={styles.date}>{formatDateLabel(session.date)}</span>
         </div>
         <button
           type="button"
           className={styles.deleteBtn}
           onClick={() => {
-            if (confirm('Удалить эту тренировку?')) actions.deleteWorkout(session.id)
+            if (confirm('Delete this workout?')) actions.deleteWorkout(session.id)
           }}
         >
           ✕
@@ -45,18 +45,18 @@ export function WorkoutSessionView({ session, actions }: WorkoutSessionViewProps
           <thead>
             <tr>
               <th className={styles.colNum}>#</th>
-              <th className={styles.colName}>Упражнения</th>
-              <th className={styles.colSets}>П</th>
+              <th className={styles.colName}>Exercise</th>
+              <th className={styles.colSets}>Sets</th>
               <th colSpan={3} className={styles.colWeightsHead}>
-                Веса
+                Weights
               </th>
               <th className={styles.colCheck} />
             </tr>
             <tr className={styles.subHead}>
               <th colSpan={3} />
-              <th>Тек</th>
-              <th>Пред</th>
-              <th>Р-ца</th>
+              <th>Now</th>
+              <th>Prev</th>
+              <th>Diff</th>
               <th />
             </tr>
           </thead>
@@ -73,7 +73,7 @@ export function WorkoutSessionView({ session, actions }: WorkoutSessionViewProps
                     <input
                       className={styles.nameInput}
                       value={ex.name}
-                      placeholder="упражнение"
+                      placeholder="exercise"
                       onChange={(e) => patch(ex.id, { name: e.target.value })}
                     />
                   </td>
@@ -142,11 +142,11 @@ export function WorkoutSessionView({ session, actions }: WorkoutSessionViewProps
 
       <div className={styles.summary}>
         <div>
-          <span className={styles.summaryLabel}>Выполнено</span>
+          <span className={styles.summaryLabel}>Done</span>
           <span className={styles.summaryVal}>{counts.done}</span>
         </div>
         <div>
-          <span className={styles.summaryLabel}>Осталось</span>
+          <span className={styles.summaryLabel}>Left</span>
           <span className={styles.summaryVal}>{counts.remaining}</span>
         </div>
       </div>
@@ -166,13 +166,13 @@ export function WorkoutList({
   return (
     <div className={styles.list}>
       <div className={styles.listHeader}>
-        <h2 className={styles.listTitle}>Тренировки</h2>
+        <h2 className={styles.listTitle}>Workouts</h2>
         <button type="button" className={styles.newBtn} onClick={onCreate}>
-          + Новая
+          + New
         </button>
       </div>
       {sessions.length === 0 ? (
-        <p className={styles.empty}>Нет тренировок. Создай первую!</p>
+        <p className={styles.empty}>No workouts yet. Create your first one!</p>
       ) : (
         sessions.map((s) => <WorkoutSessionView key={s.id} session={s} actions={actions} />)
       )}

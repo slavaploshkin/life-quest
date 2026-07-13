@@ -1,6 +1,6 @@
 export type Mood = '😢' | '😐' | '🙂' | '😊' | '🤩'
 
-/** Как часто задача повторяется */
+/** How often a quest repeats */
 export type Recurrence = 'daily' | 'once' | 'weekdays' | 'weekends'
 
 export interface Habit {
@@ -8,11 +8,11 @@ export interface Habit {
   title: string
   order: number
   recurrence: Recurrence
-  /** Только для recurrence === 'once' */
+  /** Only when recurrence === 'once' */
   onceDate?: string
 }
 
-/** Задача только на один конкретный день */
+/** One-off quest for a specific day */
 export interface DayTask {
   id: string
   title: string
@@ -54,7 +54,7 @@ export interface AppData {
 
 export type Tab = 'day' | 'progress' | 'workout' | 'analytics'
 
-/** Задача, отображаемая в карточке дня (рекуррентная или разовая) */
+/** Quest shown in a day card (recurring or one-off) */
 export interface DisplayTask {
   id: string
   title: string

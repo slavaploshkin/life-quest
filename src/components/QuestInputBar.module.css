@@ -188,6 +188,84 @@
   color: rgba(212, 188, 150, 0.62);
 }
 
+.calendarWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.calendarBtn {
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.95rem;
+  cursor: pointer;
+  line-height: 1;
+  transition:
+    background 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.calendarBtn:hover,
+.calendarBtnActive {
+  background: rgba(212, 188, 150, 0.16);
+  transform: scale(1.04);
+  box-shadow: 0 0 18px rgba(212, 188, 150, 0.14);
+}
+
+.micBtn {
+  flex-shrink: 0;
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition:
+    background 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.micBtn svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.micBtn:hover {
+  background: rgba(212, 188, 150, 0.16);
+  transform: scale(1.04);
+  box-shadow: 0 0 18px rgba(212, 188, 150, 0.14);
+}
+
+.voiceError {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 0.4rem;
+  font-size: 0.68rem;
+  color: #fecaca;
+}
+
+.dateHint {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 0.45rem;
+  font-size: 0.64rem;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
 .sendBtn {
   flex-shrink: 0;
   width: 2.4rem;

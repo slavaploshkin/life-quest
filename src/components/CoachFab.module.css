@@ -1,0 +1,73 @@
+.fab {
+  position: fixed;
+  right: max(0.85rem, calc(50vw - 520px + 0.5rem));
+  bottom: calc(1.1rem + env(safe-area-inset-bottom, 0));
+  z-index: 240;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.62rem 0.95rem 0.62rem 0.72rem;
+  width: auto;
+  height: auto;
+  border: 1px solid rgba(212, 188, 150, 0.38);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255, 230, 190, 0.28), transparent 48%),
+    rgba(22, 18, 14, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: var(--text-primary);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  box-shadow:
+    0 16px 38px rgba(0, 0, 0, 0.36),
+    0 0 32px rgba(212, 188, 150, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: box-shadow 0.25s ease, border-color 0.2s ease;
+}
+
+.fab:active {
+  cursor: grabbing;
+}
+
+.glow {
+  position: absolute;
+  inset: -0.35rem;
+  border-radius: inherit;
+  background: radial-gradient(circle, rgba(212, 188, 150, 0.22), transparent 68%);
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.icon {
+  position: relative;
+  width: 1.45rem;
+  height: 1.45rem;
+  fill: none;
+  stroke: #f0d4a8;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon circle {
+  fill: #f0d4a8;
+  stroke: none;
+}
+
+.label {
+  position: relative;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .fab {
+    right: 0.75rem;
+  }
+}

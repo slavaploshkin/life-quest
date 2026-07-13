@@ -29,25 +29,25 @@ export function TaskInputPanel({ selectedDate, onDateChange, actions }: TaskInpu
 
   return (
     <section className={styles.panel}>
-      <h2 className={styles.heading}>Новый квест</h2>
+      <h2 className={styles.heading}>New quest</h2>
 
       <div className={styles.inputRow}>
         <input
           className={styles.input}
           type="text"
-          placeholder="Что нужно сделать?"
+          placeholder="What needs to be done?"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && submit()}
           autoComplete="off"
         />
         <button type="button" className={styles.addBtn} onClick={submit} disabled={!text.trim()}>
-          Добавить
+          Add
         </button>
       </div>
 
       <div className={styles.row}>
-        <span className={styles.label}>День</span>
+        <span className={styles.label}>Day</span>
         <div className={styles.dateControls}>
           <button type="button" className={styles.dateBtn} onClick={() => onDateChange(format(subDays(parseISO(selectedDate), 1), 'yyyy-MM-dd'))}>
             ←
@@ -63,7 +63,7 @@ export function TaskInputPanel({ selectedDate, onDateChange, actions }: TaskInpu
           </button>
           {!isToday(selectedDate) && (
             <button type="button" className={styles.todayBtn} onClick={() => onDateChange(today)}>
-              Сегодня
+              Today
             </button>
           )}
         </div>
@@ -71,7 +71,7 @@ export function TaskInputPanel({ selectedDate, onDateChange, actions }: TaskInpu
       </div>
 
       <div className={styles.row}>
-        <span className={styles.label}>Повтор</span>
+        <span className={styles.label}>Repeat</span>
         <div className={styles.pills}>
           {RECURRENCES.map((r) => (
             <button

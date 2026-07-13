@@ -249,6 +249,39 @@ export function useAppData(userId: string, storageId?: string) {
     })
   }, [update, ensureDayLog])
 
+  const updateTaskTitle = useCallback(
+    (taskId: string, kind: 'habit' | 'extra', date: string, title: string) => {
+      const clean = title.trim()
+      if (!clean) return
+
+      update((prev) => {
+        if (kind === 'habit') {
+          return {
+            ...prev,
+            habits: prev.habits.map((habit) =>
+              habit.id === taskId ? { ...habit, title: clean } : habit,
+            ),
+          }
+        }
+
+        const existing = ensureDayLog(date, prev)
+        return {
+          ...prev,
+          dayLogs: {
+            ...prev.dayLogs,
+            [date]: {
+              ...existing,
+              extraTasks: existing.extraTasks.map((task) =>
+                task.id === taskId ? { ...task, title: clean } : task,
+              ),
+            },
+          },
+        }
+      })
+    },
+    [update, ensureDayLog],
+  )
+
   const resetDayPlan = useCallback((date: string) => {
     update((prev) => {
       const existing = ensureDayLog(date, prev)
@@ -357,6 +390,7 @@ export function useAppData(userId: string, storageId?: string) {
     updateDayField,
     addTask,
     removeTask,
+    updateTaskTitle,
     resetDayPlan,
     createWorkout,
     deleteWorkout,

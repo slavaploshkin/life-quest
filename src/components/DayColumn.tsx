@@ -2,7 +2,8 @@ import { useState } from 'react'
 import type { AppActions } from '../hooks/useAppData'
 import type { DayLog, Habit, Mood, Recurrence } from '../types'
 import { tasksForDay, dayTaskCounts, RECURRENCE_LABELS } from '../lib/tasks'
-import { formatDateRu, formatDayNameEn, isToday } from '../lib/stats'
+import { formatDateLabel, formatDayNameEn, isToday } from '../lib/stats'
+import { TaskRow } from './TaskRow'
 import styles from './DayColumn.module.css'
 
 const MOODS: Mood[] = ['😢', '😐', '🙂', '😊', '🤩']
@@ -15,6 +16,7 @@ interface DayColumnProps {
   habits: Habit[]
   actions: AppActions
   active?: boolean
+  carousel?: boolean
   showAddQuest?: boolean
   onAgendaQuestDropped?: (title: string) => void
 }
@@ -25,6 +27,7 @@ export function DayColumn({
   habits,
   actions,
   active,
+  carousel = false,
   showAddQuest = true,
   onAgendaQuestDropped,
 }: DayColumnProps) {
@@ -40,7 +43,7 @@ export function DayColumn({
 
   const handleReset = () => {
     if (!hasProgress) return
-    if (confirm('Сбросить все галочки за этот день?')) {
+    if (confirm('Reset all checkmarks for this day?')) {
       actions.resetDayPlan(date)
     }
   }
@@ -64,7 +67,7 @@ export function DayColumn({
 
   return (
     <article
-      className={`${styles.col} ${active ? styles.active : ''} ${today ? styles.today : ''} ${dragOver ? styles.dropTarget : ''}`}
+      className={`${styles.col} ${active ? styles.active : ''} ${carousel ? styles.carousel : ''} ${today ? styles.today : ''} ${dragOver ? styles.dropTarget : ''}`}
       onDragOver={(event) => {
         const title = event.dataTransfer.types.includes('text/plain')
         if (!title) return
@@ -86,7 +89,7 @@ export function DayColumn({
       <header className={styles.header}>
         <div className={styles.headerMain}>
           <h3 className={styles.dayName}>{formatDayNameEn(date)}</h3>
-          <span className={styles.date}>{formatDateRu(date)}</span>
+          <span className={styles.date}>{formatDateLabel(date)}</span>
         </div>
         {today && <span className={styles.badge}>today</span>}
       </header>
@@ -97,29 +100,7 @@ export function DayColumn({
         ) : (
           <ul className={styles.tasks}>
             {tasks.map((task) => (
-              <li key={`${task.kind}-${task.id}`} className={styles.task}>
-                <span className={`${styles.taskText} ${task.done ? styles.done : ''}`}>{task.title}</span>
-                <div className={styles.taskActions}>
-                  <button
-                    type="button"
-                    className={styles.removeBtn}
-                    onClick={() => actions.removeTask(task.id, task.kind, date)}
-                    title="Удалить"
-                    aria-label="Удалить задачу"
-                  >
-                    ×
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.check} ${task.done ? styles.checked : ''}`}
-                    onClick={() => actions.toggleTask(date, task.id, task.kind)}
-                    aria-label={task.done ? 'Отменить' : 'Выполнено'}
-                    aria-pressed={task.done}
-                  >
-                    {task.done && <span className={styles.checkMark}>✓</span>}
-                  </button>
-                </div>
-              </li>
+              <TaskRow key={`${task.kind}-${task.id}`} task={task} date={date} actions={actions} />
             ))}
           </ul>
         )}
@@ -128,7 +109,7 @@ export function DayColumn({
       {showAddQuest && (
         <div className={styles.addSection}>
           {!adding ? (
-            <button type="button" className={styles.plusBtn} onClick={() => setAdding(true)} aria-label="Добавить квест">
+            <button type="button" className={styles.plusBtn} onClick={() => setAdding(true)} aria-label="Add quest">
               +
             </button>
           ) : (
@@ -136,7 +117,7 @@ export function DayColumn({
               <input
                 className={styles.addInput}
                 type="text"
-                placeholder="Новый квест..."
+                placeholder="New quest..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => {
@@ -162,10 +143,10 @@ export function DayColumn({
               </div>
               <div className={styles.addActions}>
                 <button type="button" className={styles.addCancel} onClick={() => { setAdding(false); setText('') }}>
-                  Отмена
+                  Cancel
                 </button>
                 <button type="button" className={styles.addSubmit} onClick={submitQuest} disabled={!text.trim()}>
-                  Добавить
+                  Add
                 </button>
               </div>
             </div>
@@ -175,11 +156,11 @@ export function DayColumn({
 
       <div className={styles.summary}>
         <div>
-          <span className={styles.summaryLabel}>Выполнено</span>
+          <span className={styles.summaryLabel}>Done</span>
           <span className={styles.summaryVal}>{counts.done}</span>
         </div>
         <div>
-          <span className={styles.summaryLabel}>Осталось</span>
+          <span className={styles.summaryLabel}>Left</span>
           <span className={styles.summaryVal}>{counts.remaining}</span>
         </div>
         <button
@@ -187,20 +168,20 @@ export function DayColumn({
           className={styles.resetBtn}
           onClick={handleReset}
           disabled={!hasProgress}
-          title="Сбросить все галочки за день"
+          title="Reset all checkmarks for this day"
         >
-          Сброс дня
+          Reset day
         </button>
       </div>
 
       <details className={styles.details}>
-        <summary className={styles.detailsSummary}>День · урок · метрики</summary>
+        <summary className={styles.detailsSummary}>Day · lesson · metrics</summary>
 
         <div className={styles.reflect}>
-          <label className={styles.reflectLabel}>урок дня</label>
+          <label className={styles.reflectLabel}>lesson of the day</label>
           <textarea
             className={styles.lesson}
-            placeholder="Чему научился..."
+            placeholder="What I learned..."
             value={log.lesson}
             onChange={(e) => actions.updateDayField(date, 'lesson', e.target.value)}
             rows={2}
@@ -209,7 +190,7 @@ export function DayColumn({
 
         <div className={styles.metrics}>
           <div className={styles.metric}>
-            <span className={styles.metricLabel}>Сон</span>
+            <span className={styles.metricLabel}>Sleep</span>
             <select
               className={styles.select}
               value={log.sleepHours ?? ''}
@@ -220,14 +201,14 @@ export function DayColumn({
               <option value="">—</option>
               {SLEEP_OPTIONS.map((h) => (
                 <option key={h} value={h}>
-                  {h} ч
+                  {h} h
                 </option>
               ))}
             </select>
           </div>
 
           <div className={styles.metric}>
-            <span className={styles.metricLabel}>Энергия</span>
+            <span className={styles.metricLabel}>Energy</span>
             <div className={styles.energy}>
               {[1, 2, 3, 4].map((level) => (
                 <button
@@ -235,7 +216,7 @@ export function DayColumn({
                   type="button"
                   className={`${styles.bolt} ${(log.energy ?? 0) >= level ? styles.boltOn : ''}`}
                   onClick={() => actions.updateDayField(date, 'energy', level as 1 | 2 | 3 | 4)}
-                  aria-label={`Энергия ${level}`}
+                  aria-label={`Energy ${level}`}
                 >
                   ⚡
                 </button>
@@ -244,7 +225,7 @@ export function DayColumn({
           </div>
 
           <div className={styles.metric}>
-            <span className={styles.metricLabel}>Настроение</span>
+            <span className={styles.metricLabel}>Mood</span>
             <select
               className={styles.select}
               value={log.mood ?? ''}

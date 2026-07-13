@@ -13,9 +13,7 @@ interface NavBarProps {
   accountName: string
   syncing?: boolean
   syncError?: string | null
-  onPushSync?: () => void
   onChange: (tab: Tab) => void
-  onExport: () => void
   onLogout: () => void
 }
 
@@ -59,9 +57,7 @@ export function NavBar({
   accountName,
   syncing = false,
   syncError = null,
-  onPushSync,
   onChange,
-  onExport,
   onLogout,
 }: NavBarProps) {
   return (
@@ -89,19 +85,6 @@ export function NavBar({
           </button>
         ))}
       </div>
-      <button type="button" className={styles.exportBtn} onClick={onExport} title="Экспорт данных">
-        ↓
-      </button>
-      {onPushSync && (
-        <button
-          type="button"
-          className={styles.syncBtn}
-          onClick={onPushSync}
-          title={syncError ? `Sync error: ${syncError}. Tap to retry.` : 'Upload data to cloud'}
-        >
-          ↻
-        </button>
-      )}
       <button type="button" className={styles.logoutBtn} onClick={onLogout} title="Logout">
         out
       </button>

@@ -1,8 +1,24 @@
-import { format, parseISO, startOfWeek, addDays, isSameDay } from 'date-fns'
+import { format, parseISO, startOfWeek, addDays } from 'date-fns'
 import { enUS } from 'date-fns/locale'
-import { ru } from 'date-fns/locale'
 import type { AppData, DayLog, Habit } from '../types'
 import { dayTaskPct, tasksForDay } from './tasks'
+
+const APP_TIME_ZONE = 'America/Los_Angeles'
+
+export function todayInLosAngeles(): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: APP_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+
+  const year = parts.find((part) => part.type === 'year')?.value
+  const month = parts.find((part) => part.type === 'month')?.value
+  const day = parts.find((part) => part.type === 'day')?.value
+
+  return `${year}-${month}-${day}`
+}
 
 export function dayCompletionPct(log: DayLog, habits: Habit[], date: string): number {
   return dayTaskPct(tasksForDay(date, habits, log))
@@ -34,7 +50,7 @@ export function weekStats(data: AppData, anchor: Date): WeekDayStat[] {
       ({ date, completions: {}, extraTasks: [], lesson: '', sleepHours: null, energy: null, mood: null } satisfies DayLog)
     return {
       date,
-      label: format(d, 'EEEE', { locale: ru }),
+      label: format(d, 'EEEE', { locale: enUS }),
       shortLabel: format(d, 'EEEEE', { locale: enUS }),
       pct: dayCompletionPct(log, habits, date),
       log,
@@ -57,22 +73,27 @@ export function bestWorstDay(stats: WeekDayStat[]): { best: WeekDayStat | null; 
 export function weekRangeLabel(anchor: Date): string {
   const monday = startOfWeek(anchor, { weekStartsOn: 1 })
   const sunday = addDays(monday, 6)
-  const fmt = (d: Date) => format(d, 'd MMM', { locale: ru })
+  const fmt = (d: Date) => format(d, 'd MMM', { locale: enUS })
   return `${fmt(monday)} — ${fmt(sunday)}`
 }
 
-export function formatDateRu(dateStr: string): string {
-  return format(parseISO(dateStr), 'd MMMM', { locale: ru })
+export function formatDateLabel(dateStr: string): string {
+  return format(parseISO(dateStr), 'MMMM d', { locale: enUS })
 }
 
 export function formatDayNameEn(dateStr: string): string {
-  return format(parseISO(dateStr), 'EEEE')
+  return format(parseISO(dateStr), 'EEEE', { locale: enUS })
 }
 
 export function formatDateShort(dateStr: string): string {
-  return format(parseISO(dateStr), 'd MMM', { locale: ru })
+  return format(parseISO(dateStr), 'd MMM', { locale: enUS })
+}
+
+/** @deprecated use formatDateLabel */
+export function formatDateRu(dateStr: string): string {
+  return formatDateLabel(dateStr)
 }
 
 export function isToday(dateStr: string): boolean {
-  return isSameDay(parseISO(dateStr), new Date())
+  return dateStr === todayInLosAngeles()
 }

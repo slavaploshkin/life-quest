@@ -16,6 +16,7 @@ export interface ActiveAccount {
 }
 
 const ACTIVE_ACCOUNT_KEY = 'life-quest-active-account'
+const API_AUTH_KEY = 'life-quest-api-auth'
 const AUTH_DOMAIN = import.meta.env.VITE_AUTH_EMAIL_DOMAIN?.trim() || 'life-quest.app'
 
 const rawAccounts: LocalAccount[] = [
@@ -105,6 +106,57 @@ function rememberAccount(storageId: string): void {
   localStorage.setItem(ACTIVE_ACCOUNT_KEY, storageId)
 }
 
+export function rememberApiCredentials(username: string, password: string): void {
+  const payload = JSON.stringify({ username: username.trim(), password: password.trim() })
+  sessionStorage.setItem(API_AUTH_KEY, payload)
+  localStorage.setItem(API_AUTH_KEY, payload)
+}
+
+export function clearApiCredentials(): void {
+  sessionStorage.removeItem(API_AUTH_KEY)
+  localStorage.removeItem(API_AUTH_KEY)
+}
+
+function readStoredCredentials(): { username: string; password: string } | null {
+  for (const store of [sessionStorage, localStorage]) {
+    const raw = store.getItem(API_AUTH_KEY)
+    if (!raw) continue
+    try {
+      const parsed = JSON.parse(raw) as { username?: string; password?: string }
+      if (parsed.username && parsed.password) {
+        return { username: parsed.username, password: parsed.password }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return null
+}
+
+function credentialsForActiveAccount(): { username: string; password: string } | null {
+  const storageId = localStorage.getItem(ACTIVE_ACCOUNT_KEY)
+  if (!storageId) return null
+  const account = configuredAccounts.find((item) => item.storageId === storageId)
+  if (!account) return null
+  return { username: account.username, password: account.password }
+}
+
+export function getApiAuthPayload():
+  | { username: string; password: string }
+  | { secret: string }
+  | null {
+  const stored = readStoredCredentials()
+  if (stored) return stored
+
+  const active = credentialsForActiveAccount()
+  if (active) return active
+
+  const secret = import.meta.env.VITE_ASSISTANT_SECRET?.trim()
+  if (secret) return { secret }
+
+  return null
+}
+
 export async function signIn(username: string, password: string): Promise<ActiveAccount | null> {
   if (configuredAccounts.length === 0) return null
 
@@ -112,6 +164,7 @@ export async function signIn(username: string, password: string): Promise<Active
   if (!account) return null
 
   rememberAccount(account.storageId)
+  rememberApiCredentials(account.username, password)
 
   if (!supabaseConfigured || !supabase) {
     return toActiveAccount(account, account.storageId)
@@ -147,6 +200,7 @@ export async function restoreSession(): Promise<ActiveAccount | null> {
 
 export async function signOut(): Promise<void> {
   localStorage.removeItem(ACTIVE_ACCOUNT_KEY)
+  clearApiCredentials()
   if (supabaseConfigured && supabase) {
     await supabase.auth.signOut()
   }

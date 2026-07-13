@@ -1,7 +1,7 @@
 .nav {
   position: fixed;
   top: 50%;
-  left: max(0.85rem, calc(50vw - 520px - 4.25rem));
+  left: max(0.55rem, calc(50vw - 560px - 4.75rem));
   transform: translateY(-50%);
   z-index: 100;
   display: flex;
@@ -190,40 +190,6 @@
   border: 2px solid rgba(20, 16, 12, 0.92);
 }
 
-.syncBtn {
-  flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  width: 2rem;
-  height: 2rem;
-  border-radius: 999px;
-  cursor: pointer;
-  font-size: 0.95rem;
-  transition:
-    color 0.18s,
-    border-color 0.18s,
-    transform 0.2s,
-    box-shadow 0.25s;
-}
-
-.exportBtn {
-  flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  width: 2rem;
-  height: 2rem;
-  border-radius: 999px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition:
-    color 0.18s,
-    border-color 0.18s,
-    transform 0.2s,
-    box-shadow 0.25s;
-}
-
 .logoutBtn {
   flex-shrink: 0;
   background: rgba(255, 255, 255, 0.04);
@@ -244,8 +210,6 @@
     box-shadow 0.25s;
 }
 
-.exportBtn:hover,
-.syncBtn:hover,
 .logoutBtn:hover {
   color: var(--accent);
   border-color: rgba(201, 184, 150, 0.35);
@@ -255,8 +219,8 @@
 
 @media (max-width: 720px) {
   .nav {
-    left: 0.45rem;
-    padding: 0.55rem 0.4rem;
+    left: 0.28rem;
+    padding: 0.55rem 0.38rem;
   }
 
   .tab {

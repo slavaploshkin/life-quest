@@ -1,0 +1,341 @@
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(8, 6, 4, 0.52);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.sheet {
+  position: relative;
+  pointer-events: auto;
+  width: min(680px, 100vw);
+  max-height: min(82vh, 760px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: none;
+  border-radius: 28px 28px 0 0;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(212, 188, 150, 0.16), transparent 36%),
+    rgba(22, 18, 14, 0.94);
+  backdrop-filter: blur(28px) saturate(1.2);
+  -webkit-backdrop-filter: blur(28px) saturate(1.2);
+  box-shadow: 0 -24px 60px rgba(0, 0, 0, 0.38);
+  animation: slideUp 0.34s cubic-bezier(0.2, 0.9, 0.18, 1);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.handleBar {
+  position: relative;
+  flex-shrink: 0;
+  padding: 0.55rem 0.85rem 0.15rem;
+}
+
+.grabber {
+  width: 2.6rem;
+  height: 0.28rem;
+  margin: 0 auto;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.closeBtn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.75rem;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.header {
+  flex-shrink: 0;
+  padding: 0 1rem 0.55rem;
+}
+
+.kicker {
+  margin: 0;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.title {
+  margin: 0.12rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.35rem 1rem 0.75rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.empty {
+  margin: auto 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.starters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.starterBtn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border-radius: 999px;
+  padding: 0.42rem 0.75rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.bubble {
+  max-width: min(92%, 30rem);
+  padding: 0.68rem 0.85rem;
+  border-radius: 16px;
+  font-size: 0.86rem;
+  line-height: 1.48;
+  white-space: pre-wrap;
+}
+
+.userBubble {
+  align-self: flex-end;
+  background: rgba(212, 188, 150, 0.18);
+  border: 1px solid rgba(212, 188, 150, 0.22);
+}
+
+.assistantBubble {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.7rem;
+  border-radius: 14px;
+  background: rgba(110, 231, 160, 0.08);
+  border: 1px solid rgba(110, 231, 160, 0.18);
+}
+
+.suggestionsTitle {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(110, 231, 160, 0.85);
+}
+
+.suggestionCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.suggestionCard strong {
+  display: block;
+  font-size: 0.82rem;
+}
+
+.suggestionCard span {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.66rem;
+  color: var(--text-muted);
+}
+
+.addBtn {
+  flex-shrink: 0;
+  background: rgba(110, 231, 160, 0.16);
+  border: 1px solid rgba(110, 231, 160, 0.28);
+  color: #b7f5d0;
+  border-radius: 999px;
+  padding: 0.34rem 0.65rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.addBtn:disabled {
+  opacity: 0.55;
+}
+
+.dismissBtn {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.typing {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.error {
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  color: #fecaca;
+  font-size: 0.76rem;
+}
+
+.composerWrap {
+  flex-shrink: 0;
+  margin: 0 0.85rem calc(0.85rem + env(safe-area-inset-bottom, 0));
+  padding: 0.55rem 0.65rem;
+  border-radius: 22px;
+  background: rgba(30, 24, 18, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.composer {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  width: 100%;
+}
+
+.micBtn {
+  flex-shrink: 0;
+  width: 2.4rem;
+  height: 2.4rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.micBtn svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.micBtn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.input {
+  flex: 1;
+  resize: none;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  outline: none;
+  min-height: 1.45rem;
+  max-height: 6rem;
+  padding: 0.45rem 0.15rem;
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.sendBtn {
+  flex-shrink: 0;
+  width: 2.35rem;
+  height: 2.35rem;
+  background: linear-gradient(135deg, #f0c58a, #b9854f);
+  border: none;
+  color: #1a1208;
+  font-weight: 800;
+  font-size: 1rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.sendBtn:disabled,
+.micBtn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+
+@media (max-width: 720px) {
+  .sheet {
+    max-height: 88vh;
+    border-radius: 22px 22px 0 0;
+  }
+}

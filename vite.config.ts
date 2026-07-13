@@ -11,7 +11,7 @@ export default defineConfig({
       manifest: {
         name: 'Life Quest',
         short_name: 'LifeQuest',
-        description: 'Преврати жизнь в игру — квесты, привычки, тренировки',
+        description: 'Turn life into a game — quests, habits, workouts',
         theme_color: '#000000',
         background_color: '#000000',
         display: 'standalone',

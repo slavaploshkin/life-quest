@@ -37,7 +37,10 @@ export function tasksForDay(date: string, habits: Habit[], log: DayLog): Display
     done: t.done,
   }))
 
-  return [...recurring, ...extra]
+  const all = [...recurring, ...extra]
+  const done = all.filter((task) => task.done)
+  const pending = all.filter((task) => !task.done)
+  return [...done, ...pending]
 }
 
 export function dayTaskCounts(tasks: DisplayTask[]) {
@@ -51,8 +54,8 @@ export function dayTaskPct(tasks: DisplayTask[]): number {
 }
 
 export const RECURRENCE_LABELS: Record<Recurrence, string> = {
-  daily: 'Каждый день',
-  once: 'Только этот день',
-  weekdays: 'Будни (Пн–Пт)',
-  weekends: 'Выходные',
+  daily: 'Every day',
+  once: 'This day only',
+  weekdays: 'Weekdays (Mon–Fri)',
+  weekends: 'Weekends',
 }

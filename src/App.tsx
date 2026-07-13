@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { format, addDays, subDays } from 'date-fns'
+import { addDays, parseISO, subDays } from 'date-fns'
 import { useAppData } from './hooks/useAppData'
-import { weekStats, weekRangeLabel } from './lib/stats'
-import { exportData, normalizeAppData } from './lib/storage'
+import { todayInLosAngeles, weekStats, weekRangeLabel } from './lib/stats'
+import { normalizeAppData } from './lib/storage'
 import type { ActiveAccount } from './lib/auth'
 import type { Tab } from './types'
 import { NavBar } from './components/NavBar'
+import { DailyProgress } from './components/DailyProgress'
 import { WeeklyChart } from './components/WeeklyChart'
 import { InfiniteDayScroll } from './components/InfiniteDayScroll'
 import { QuestInputBar } from './components/QuestInputBar'
 import { DayColumn } from './components/DayColumn'
 import { WorkoutList, createTodayWorkout } from './components/WorkoutSessionView'
 import { WorkoutAnalytics } from './components/WorkoutAnalytics'
+import { AssistantDrawer } from './components/AssistantDrawer'
+import { CoachFab } from './components/CoachFab'
 import { AgendaDrawer } from './components/AgendaDrawer'
 import styles from './App.module.css'
 
@@ -22,26 +25,27 @@ interface AppProps {
 
 function App({ account, onLogout }: AppProps) {
   const actions = useAppData(account.userId, account.storageId)
-  const { data, habits, agendaItems, ready, syncing, syncError, pushLocalToCloud } = actions
+  const { data, habits, agendaItems, ready, syncing, syncError } = actions
   const [tab, setTab] = useState<Tab>('day')
-  const [anchor, setAnchor] = useState(new Date())
-  const [selectedDate, setSelectedDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
-  const openedDayRef = useRef(format(new Date(), 'yyyy-MM-dd'))
+  const [coachOpen, setCoachOpen] = useState(false)
+  const [anchor, setAnchor] = useState(() => parseISO(todayInLosAngeles()))
+  const [selectedDate, setSelectedDate] = useState(() => todayInLosAngeles())
+  const openedDayRef = useRef(todayInLosAngeles())
   const importRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const syncToday = () => {
-      const today = format(new Date(), 'yyyy-MM-dd')
+      const today = todayInLosAngeles()
       openedDayRef.current = today
       setSelectedDate(today)
-      setAnchor(new Date())
+      setAnchor(parseISO(today))
     }
 
     syncToday()
 
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return
-      const today = format(new Date(), 'yyyy-MM-dd')
+      const today = todayInLosAngeles()
       if (today !== openedDayRef.current) syncToday()
     }
 
@@ -58,27 +62,17 @@ function App({ account, onLogout }: AppProps) {
     setSelectedDate(date)
   }, [])
 
-  const today = format(new Date(), 'yyyy-MM-dd')
+  const today = todayInLosAngeles()
   const stats = weekStats(data, anchor)
-
-  const handleExport = () => {
-    const blob = new Blob([exportData(data)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `life-quest-${today}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
 
   const handleImport = (file: File) => {
     const reader = new FileReader()
     reader.onload = () => {
       try {
         actions.setData(normalizeAppData(JSON.parse(reader.result as string)))
-        alert('Данные импортированы!')
+        alert('Data imported!')
       } catch {
-        alert('Ошибка импорта — проверь файл')
+        alert('Import failed — check the file')
       }
     }
     reader.readAsText(file)
@@ -99,10 +93,18 @@ function App({ account, onLogout }: AppProps) {
         accountName={account.displayName}
         syncing={syncing}
         syncError={syncError}
-        onPushSync={() => void pushLocalToCloud()}
         onChange={setTab}
-        onExport={handleExport}
         onLogout={onLogout}
+      />
+
+      <CoachFab hidden={coachOpen || tab === 'day'} onClick={() => setCoachOpen(true)} />
+
+      <AssistantDrawer
+        open={coachOpen}
+        onClose={() => setCoachOpen(false)}
+        account={account}
+        selectedDate={selectedDate}
+        actions={actions}
       />
       {tab === 'day' && (
         <AgendaDrawer
@@ -114,7 +116,7 @@ function App({ account, onLogout }: AppProps) {
 
       {tab === 'day' && (
         <div className={styles.dayPage}>
-          <WeeklyChart stats={weekStats(data, new Date())} rangeLabel={weekRangeLabel(new Date())} compact />
+          <DailyProgress date={selectedDate} data={data} habits={habits} />
           <InfiniteDayScroll
             habits={habits}
             actions={actions}
@@ -124,6 +126,7 @@ function App({ account, onLogout }: AppProps) {
           />
           <QuestInputBar
             selectedDate={selectedDate}
+            onDateChange={onSelectedDateChange}
             actions={actions}
             onAgendaQuestAdded={actions.removeAgendaItem}
           />
@@ -134,11 +137,11 @@ function App({ account, onLogout }: AppProps) {
         <div className={styles.progressPage}>
           <div className={styles.weekNav}>
             <button type="button" onClick={() => setAnchor(subDays(anchor, 7))}>
-              ← прошлая
+              ← previous
             </button>
             <span>{weekRangeLabel(anchor)}</span>
             <button type="button" onClick={() => setAnchor(addDays(anchor, 7))}>
-              следующая →
+              next →
             </button>
           </div>
           <WeeklyChart stats={stats} rangeLabel={weekRangeLabel(anchor)} />
@@ -182,7 +185,7 @@ function App({ account, onLogout }: AppProps) {
             }}
           />
           <button type="button" className={styles.importBtn} onClick={() => importRef.current?.click()}>
-            Импорт бэкапа
+            Import backup
           </button>
         </footer>
       )}

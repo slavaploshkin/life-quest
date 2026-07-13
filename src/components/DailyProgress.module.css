@@ -1,0 +1,97 @@
+.section {
+  flex-shrink: 0;
+  padding: 0.65rem 1rem 0.85rem;
+}
+
+.layout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0.85rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+}
+
+.info {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--text-primary);
+}
+
+.subtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.todayBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.42rem;
+  border-radius: 999px;
+  background: rgba(212, 188, 150, 0.16);
+  border: 1px solid rgba(212, 188, 150, 0.28);
+  color: var(--accent);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.counts {
+  margin-top: 0.45rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.countDone {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.countSep {
+  margin: 0 0.25rem;
+  opacity: 0.5;
+}
+
+.ringCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.ringCaption {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding-inline: 0.75rem;
+  }
+
+  .layout {
+    padding: 0.75rem 0.85rem;
+  }
+}

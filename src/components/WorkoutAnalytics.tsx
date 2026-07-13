@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { format, parseISO } from 'date-fns'
-import { ru } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
 import type { WorkoutSession } from '../types'
 import styles from './WorkoutAnalytics.module.css'
 
@@ -74,8 +74,8 @@ export function WorkoutAnalytics({ sessions }: WorkoutAnalyticsProps) {
     <div className={styles.wrap}>
       <header className={styles.header}>
         <div>
-          <p className={styles.meta}>Всего тренировок: {totalWorkouts}</p>
-          <p className={styles.meta}>В среднем за день: {avgPerDay}</p>
+          <p className={styles.meta}>Total workouts: {totalWorkouts}</p>
+          <p className={styles.meta}>Average per active day: {avgPerDay}</p>
         </div>
         {active && (
           <div className={styles.chartBox}>
@@ -83,7 +83,7 @@ export function WorkoutAnalytics({ sessions }: WorkoutAnalyticsProps) {
             <div className={styles.chart}>
               {active.history.map((h, i) => {
                 const pct = (h.weight / chartMax) * 100
-                const label = format(parseISO(h.date), 'd MMM', { locale: ru })
+                const label = format(parseISO(h.date), 'd MMM', { locale: enUS })
                 return (
                   <div key={`${h.date}-${i}`} className={styles.barCol}>
                     {h.diff != null && h.diff !== 0 && (
@@ -109,20 +109,20 @@ export function WorkoutAnalytics({ sessions }: WorkoutAnalyticsProps) {
           <thead>
             <tr>
               <th>#</th>
-              <th>Упражнение</th>
-              <th>Ср п</th>
-              <th>Ср вес</th>
+              <th>Exercise</th>
+              <th>Avg sets</th>
+              <th>Avg weight</th>
               <th>Max</th>
-              <th>Мин</th>
-              <th>Всего</th>
-              <th>Выбрать</th>
+              <th>Min</th>
+              <th>Total</th>
+              <th>Chart</th>
             </tr>
           </thead>
           <tbody>
             {stats.length === 0 ? (
               <tr>
                 <td colSpan={8} className={styles.empty}>
-                  Заполни тренировки — здесь появится статистика
+                  Log workouts to see stats here
                 </td>
               </tr>
             ) : (
